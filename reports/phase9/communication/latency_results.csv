@@ -1,0 +1,6 @@
+target_latency_ms,measured_mean_latency_ms,measured_p50_latency_ms,measured_p95_latency_ms,measured_p99_latency_ms,measured_max_latency_ms,health_score,status
+5.0,5.1,5.1,5.85,6.19,6.26,100.0,CONNECTED
+20.0,20.12,20.2,23.42,23.96,24.28,100.0,CONNECTED
+50.0,50.55,50.57,60.02,61.74,62.2,100.0,CONNECTED
+100.0,99.58,99.8,116.34,124.08,125.8,100.0,CONNECTED
+200.0,204.71,205.09,239.03,247.31,252.03,75.0,DEGRADED

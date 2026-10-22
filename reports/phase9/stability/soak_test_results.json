@@ -1,0 +1,81 @@
+{
+  "metadata": {
+    "experiment_id": "EXP-STAB-01",
+    "experiment_name": "continuous_stability_soak_test",
+    "description": "Continuous telemetry ingestion soak testing evaluating RSS stability and zero leak guarantees.",
+    "random_seed": 42,
+    "timestamp": "2026-10-19T07:10:16.796548+00:00",
+    "dataset_version": "v1.0",
+    "model_version": "v1.0",
+    "model_path": "/Users/sivas_mac/projects/SpectrumSentry-AI/backend/models/modulation_mlp_v1.joblib",
+    "dataset_dir": "/Users/sivas_mac/projects/SpectrumSentry-AI/backend/data/datasets",
+    "output_dir": "/Users/sivas_mac/projects/SpectrumSentry-AI/reports/phase9",
+    "parameters": {
+      "total_events": 300,
+      "checkpoint_interval": 20
+    },
+    "environment": {
+      "os_name": "Darwin",
+      "os_release": "25.6.0",
+      "os_version": "Darwin Kernel Version 25.6.0: Fri Jul 31 19:16:20 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T8142",
+      "machine_architecture": "arm64",
+      "processor": "arm",
+      "python_version": "3.12.15",
+      "numpy_version": "2.5.4",
+      "scipy_version": "1.18.1",
+      "sklearn_version": "1.9.1",
+      "matplotlib_version": "3.11.2",
+      "pid": 76178
+    }
+  },
+  "stability_summary": {
+    "total_events_processed": 300,
+    "total_elapsed_seconds": 0.133,
+    "event_throughput_hz": 2251.73,
+    "initial_memory_mb": 329.125,
+    "final_memory_mb": 329.125,
+    "net_memory_delta_mb": 0.0,
+    "second_half_growth_mb": 0.0,
+    "unhandled_exceptions": 0,
+    "zero_memory_leak_verified": true,
+    "zero_error_rate_verified": true
+  },
+  "time_series": {
+    "elapsed_seconds": [
+      0.001,
+      0.007,
+      0.014,
+      0.022,
+      0.029,
+      0.037,
+      0.046,
+      0.055,
+      0.064,
+      0.073,
+      0.082,
+      0.092,
+      0.102,
+      0.112,
+      0.123,
+      0.133
+    ],
+    "memory_rss_mb": [
+      329.125,
+      329.125,
+      329.125,
+      329.125,
+      329.125,
+      329.125,
+      329.125,
+      329.125,
+      329.125,
+      329.125,
+      329.125,
+      329.125,
+      329.125,
+      329.125,
+      329.125,
+      329.125
+    ]
+  }
+}

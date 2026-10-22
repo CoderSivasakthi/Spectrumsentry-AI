@@ -1,0 +1,7 @@
+configured_jitter_std_ms,base_latency_ms,measured_jitter_ms,avg_latency_ms,health_score,status
+0.0,30.0,0.0,30.0,100.0,CONNECTED
+2.0,30.0,2.19,30.0,100.0,CONNECTED
+5.0,30.0,5.75,30.24,100.0,CONNECTED
+10.0,30.0,9.8,29.47,100.0,CONNECTED
+20.0,30.0,23.62,30.05,100.0,CONNECTED
+40.0,30.0,33.07,36.19,98.5,DEGRADED

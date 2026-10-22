@@ -1,0 +1,21 @@
+{
+  "timeout_threshold_seconds": 2.0,
+  "phase_a_normal": {
+    "status": "CONNECTED",
+    "health_score": 100.0,
+    "packets_sent": 10
+  },
+  "phase_b_interruption": {
+    "silence_duration_seconds": 2.5,
+    "interruption_detected": true,
+    "detected_status": "INTERRUPTED",
+    "interruption_duration": 2.59,
+    "cumulative_interruptions": 1
+  },
+  "phase_c_recovery": {
+    "recovery_detected": true,
+    "detected_status": "RECOVERING",
+    "final_health_score": 95.0
+  },
+  "transition_sequence_valid": true
+}

@@ -1,0 +1,76 @@
+# Python
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment in backend
+backend/.venv/
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+
+# Node / Frontend
+frontend/node_modules/
+node_modules/
+frontend/dist/
+frontend/dist-test/
+dist/
+dist-test/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Databases and storage
+*.db
+*.sqlite
+*.sqlite3
+storage/spectrumsentry.db
+storage/logs/*
+!storage/logs/.gitkeep
+storage/experiments/*
+!storage/experiments/.gitkeep
+
+# Datasets and Models
+backend/models/*.joblib
+backend/models/*.pkl
+backend/data/raw/*
+!backend/data/raw/.gitkeep
+backend/data/processed/*
+!backend/data/processed/.gitkeep
+backend/data/datasets/*
+!backend/data/datasets/.gitkeep
+
+# Testing and Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp

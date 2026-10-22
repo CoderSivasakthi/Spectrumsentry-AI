@@ -1,0 +1,52 @@
+[
+  {
+    "target_latency_ms": 5.0,
+    "measured_mean_latency_ms": 5.1,
+    "measured_p50_latency_ms": 5.1,
+    "measured_p95_latency_ms": 5.85,
+    "measured_p99_latency_ms": 6.19,
+    "measured_max_latency_ms": 6.26,
+    "health_score": 100.0,
+    "status": "CONNECTED"
+  },
+  {
+    "target_latency_ms": 20.0,
+    "measured_mean_latency_ms": 20.12,
+    "measured_p50_latency_ms": 20.2,
+    "measured_p95_latency_ms": 23.42,
+    "measured_p99_latency_ms": 23.96,
+    "measured_max_latency_ms": 24.28,
+    "health_score": 100.0,
+    "status": "CONNECTED"
+  },
+  {
+    "target_latency_ms": 50.0,
+    "measured_mean_latency_ms": 50.55,
+    "measured_p50_latency_ms": 50.57,
+    "measured_p95_latency_ms": 60.02,
+    "measured_p99_latency_ms": 61.74,
+    "measured_max_latency_ms": 62.2,
+    "health_score": 100.0,
+    "status": "CONNECTED"
+  },
+  {
+    "target_latency_ms": 100.0,
+    "measured_mean_latency_ms": 99.58,
+    "measured_p50_latency_ms": 99.8,
+    "measured_p95_latency_ms": 116.34,
+    "measured_p99_latency_ms": 124.08,
+    "measured_max_latency_ms": 125.8,
+    "health_score": 100.0,
+    "status": "CONNECTED"
+  },
+  {
+    "target_latency_ms": 200.0,
+    "measured_mean_latency_ms": 204.71,
+    "measured_p50_latency_ms": 205.09,
+    "measured_p95_latency_ms": 239.03,
+    "measured_p99_latency_ms": 247.31,
+    "measured_max_latency_ms": 252.03,
+    "health_score": 75.0,
+    "status": "DEGRADED"
+  }
+]

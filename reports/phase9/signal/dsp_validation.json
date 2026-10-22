@@ -1,0 +1,155 @@
+{
+  "metadata": {
+    "experiment_id": "EXP-DSP-01",
+    "experiment_name": "signal_dsp_calibration",
+    "description": "Verification of synthetic modulation generation, AWGN SNR calibration, and feature stability.",
+    "random_seed": 42,
+    "timestamp": "2026-10-19T07:10:13.396904+00:00",
+    "dataset_version": "v1.0",
+    "model_version": "v1.0",
+    "model_path": "/Users/sivas_mac/projects/SpectrumSentry-AI/backend/models/modulation_mlp_v1.joblib",
+    "dataset_dir": "/Users/sivas_mac/projects/SpectrumSentry-AI/backend/data/datasets",
+    "output_dir": "/Users/sivas_mac/projects/SpectrumSentry-AI/reports/phase9",
+    "parameters": {
+      "snr_sweep_levels": [
+        -5.0,
+        0.0,
+        5.0,
+        10.0,
+        15.0,
+        20.0
+      ],
+      "trials_per_level": 50,
+      "modulations": [
+        "BPSK",
+        "QPSK",
+        "16-QAM"
+      ]
+    },
+    "environment": {
+      "os_name": "Darwin",
+      "os_release": "25.6.0",
+      "os_version": "Darwin Kernel Version 25.6.0: Fri Jul 31 19:16:20 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T8142",
+      "machine_architecture": "arm64",
+      "processor": "arm",
+      "python_version": "3.12.15",
+      "numpy_version": "2.5.4",
+      "scipy_version": "1.18.1",
+      "sklearn_version": "1.9.1",
+      "matplotlib_version": "3.11.2",
+      "pid": 76178
+    }
+  },
+  "modulation_generation": {
+    "BPSK": {
+      "num_samples": 1024,
+      "is_complex": true,
+      "measured_power": 1.0,
+      "power_deviation_from_unity": 0.0,
+      "valid": true
+    },
+    "QPSK": {
+      "num_samples": 1024,
+      "is_complex": true,
+      "measured_power": 1.0,
+      "power_deviation_from_unity": 0.0,
+      "valid": true
+    },
+    "16-QAM": {
+      "num_samples": 1024,
+      "is_complex": true,
+      "measured_power": 1.009375,
+      "power_deviation_from_unity": 0.009375,
+      "valid": true
+    }
+  },
+  "snr_calibration": {
+    "overall_mean_absolute_snr_error_db": 0.0672,
+    "overall_max_absolute_snr_error_db": 0.2469,
+    "records": [
+      {
+        "target_snr_db": -5.0,
+        "trials": 50,
+        "measured_snr_mean": -5.0061,
+        "measured_snr_std": 0.0931,
+        "mean_error_db": -0.0061,
+        "mean_absolute_error_db": 0.0763,
+        "max_absolute_error_db": 0.2148,
+        "avg_signal_power": 1.0,
+        "avg_noise_power": 3.167468
+      },
+      {
+        "target_snr_db": 0.0,
+        "trials": 50,
+        "measured_snr_mean": 0.026,
+        "measured_snr_std": 0.0752,
+        "mean_error_db": 0.026,
+        "mean_absolute_error_db": 0.0649,
+        "max_absolute_error_db": 0.2145,
+        "avg_signal_power": 1.0,
+        "avg_noise_power": 0.994179
+      },
+      {
+        "target_snr_db": 5.0,
+        "trials": 50,
+        "measured_snr_mean": 4.9941,
+        "measured_snr_std": 0.0827,
+        "mean_error_db": -0.0059,
+        "mean_absolute_error_db": 0.0688,
+        "max_absolute_error_db": 0.1649,
+        "avg_signal_power": 1.0,
+        "avg_noise_power": 0.316717
+      },
+      {
+        "target_snr_db": 10.0,
+        "trials": 50,
+        "measured_snr_mean": 10.0147,
+        "measured_snr_std": 0.0817,
+        "mean_error_db": 0.0147,
+        "mean_absolute_error_db": 0.0623,
+        "max_absolute_error_db": 0.2469,
+        "avg_signal_power": 1.0,
+        "avg_noise_power": 0.09968
+      },
+      {
+        "target_snr_db": 15.0,
+        "trials": 50,
+        "measured_snr_mean": 15.0023,
+        "measured_snr_std": 0.0747,
+        "mean_error_db": 0.0023,
+        "mean_absolute_error_db": 0.0588,
+        "max_absolute_error_db": 0.191,
+        "avg_signal_power": 1.0,
+        "avg_noise_power": 0.031611
+      },
+      {
+        "target_snr_db": 20.0,
+        "trials": 50,
+        "measured_snr_mean": 19.9911,
+        "measured_snr_std": 0.0872,
+        "mean_error_db": -0.0089,
+        "mean_absolute_error_db": 0.0723,
+        "max_absolute_error_db": 0.1906,
+        "avg_signal_power": 1.0,
+        "avg_noise_power": 0.010023
+      }
+    ]
+  },
+  "feature_stability_summary": {
+    "BPSK": {
+      "trials": 50,
+      "snr_db": 15.0,
+      "avg_cv": 4.6424
+    },
+    "QPSK": {
+      "trials": 50,
+      "snr_db": 15.0,
+      "avg_cv": 15.3795
+    },
+    "16-QAM": {
+      "trials": 50,
+      "snr_db": 15.0,
+      "avg_cv": 2.4812
+    }
+  }
+}

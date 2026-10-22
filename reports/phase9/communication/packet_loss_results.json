@@ -1,0 +1,62 @@
+[
+  {
+    "configured_loss_percent": 0.0,
+    "packets_sent": 200,
+    "packets_received": 200,
+    "packets_lost": 0,
+    "measured_loss_percent": 0.0,
+    "loss_error_percent": 0.0,
+    "health_score": 100.0,
+    "status": "CONNECTED"
+  },
+  {
+    "configured_loss_percent": 5.0,
+    "packets_sent": 200,
+    "packets_received": 189,
+    "packets_lost": 11,
+    "measured_loss_percent": 5.5,
+    "loss_error_percent": 0.5,
+    "health_score": 89.0,
+    "status": "DEGRADED"
+  },
+  {
+    "configured_loss_percent": 10.0,
+    "packets_sent": 200,
+    "packets_received": 173,
+    "packets_lost": 27,
+    "measured_loss_percent": 13.5,
+    "loss_error_percent": 3.5,
+    "health_score": 73.0,
+    "status": "DEGRADED"
+  },
+  {
+    "configured_loss_percent": 15.0,
+    "packets_sent": 200,
+    "packets_received": 162,
+    "packets_lost": 38,
+    "measured_loss_percent": 18.18,
+    "loss_error_percent": 3.18,
+    "health_score": 63.6,
+    "status": "DEGRADED"
+  },
+  {
+    "configured_loss_percent": 25.0,
+    "packets_sent": 200,
+    "packets_received": 145,
+    "packets_lost": 55,
+    "measured_loss_percent": 27.14,
+    "loss_error_percent": 2.14,
+    "health_score": 60.0,
+    "status": "DEGRADED"
+  },
+  {
+    "configured_loss_percent": 50.0,
+    "packets_sent": 200,
+    "packets_received": 89,
+    "packets_lost": 111,
+    "measured_loss_percent": 55.28,
+    "loss_error_percent": 5.28,
+    "health_score": 60.0,
+    "status": "DEGRADED"
+  }
+]

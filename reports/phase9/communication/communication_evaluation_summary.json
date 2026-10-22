@@ -1,0 +1,238 @@
+{
+  "metadata": {
+    "experiment_id": "EXP-COMM-01",
+    "experiment_name": "communication_telemetry_evaluation",
+    "description": "Evaluation of packet loss, latency, jitter tracking, and interruption/recovery detection.",
+    "random_seed": 42,
+    "timestamp": "2026-10-19T07:10:14.057162+00:00",
+    "dataset_version": "v1.0",
+    "model_version": "v1.0",
+    "model_path": "/Users/sivas_mac/projects/SpectrumSentry-AI/backend/models/modulation_mlp_v1.joblib",
+    "dataset_dir": "/Users/sivas_mac/projects/SpectrumSentry-AI/backend/data/datasets",
+    "output_dir": "/Users/sivas_mac/projects/SpectrumSentry-AI/reports/phase9",
+    "parameters": {
+      "packet_loss_levels": [
+        0.0,
+        5.0,
+        10.0,
+        15.0,
+        25.0,
+        50.0
+      ],
+      "latency_levels_ms": [
+        5.0,
+        20.0,
+        50.0,
+        100.0,
+        200.0
+      ],
+      "jitter_std_levels_ms": [
+        0.0,
+        2.0,
+        5.0,
+        10.0,
+        20.0,
+        40.0
+      ],
+      "silence_timeout_sec": 2.0
+    },
+    "environment": {
+      "os_name": "Darwin",
+      "os_release": "25.6.0",
+      "os_version": "Darwin Kernel Version 25.6.0: Fri Jul 31 19:16:20 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T8142",
+      "machine_architecture": "arm64",
+      "processor": "arm",
+      "python_version": "3.12.15",
+      "numpy_version": "2.5.4",
+      "scipy_version": "1.18.1",
+      "sklearn_version": "1.9.1",
+      "matplotlib_version": "3.11.2",
+      "pid": 76178
+    }
+  },
+  "packet_loss_evaluation": [
+    {
+      "configured_loss_percent": 0.0,
+      "packets_sent": 200,
+      "packets_received": 200,
+      "packets_lost": 0,
+      "measured_loss_percent": 0.0,
+      "loss_error_percent": 0.0,
+      "health_score": 100.0,
+      "status": "CONNECTED"
+    },
+    {
+      "configured_loss_percent": 5.0,
+      "packets_sent": 200,
+      "packets_received": 189,
+      "packets_lost": 11,
+      "measured_loss_percent": 5.5,
+      "loss_error_percent": 0.5,
+      "health_score": 89.0,
+      "status": "DEGRADED"
+    },
+    {
+      "configured_loss_percent": 10.0,
+      "packets_sent": 200,
+      "packets_received": 173,
+      "packets_lost": 27,
+      "measured_loss_percent": 13.5,
+      "loss_error_percent": 3.5,
+      "health_score": 73.0,
+      "status": "DEGRADED"
+    },
+    {
+      "configured_loss_percent": 15.0,
+      "packets_sent": 200,
+      "packets_received": 162,
+      "packets_lost": 38,
+      "measured_loss_percent": 18.18,
+      "loss_error_percent": 3.18,
+      "health_score": 63.6,
+      "status": "DEGRADED"
+    },
+    {
+      "configured_loss_percent": 25.0,
+      "packets_sent": 200,
+      "packets_received": 145,
+      "packets_lost": 55,
+      "measured_loss_percent": 27.14,
+      "loss_error_percent": 2.14,
+      "health_score": 60.0,
+      "status": "DEGRADED"
+    },
+    {
+      "configured_loss_percent": 50.0,
+      "packets_sent": 200,
+      "packets_received": 89,
+      "packets_lost": 111,
+      "measured_loss_percent": 55.28,
+      "loss_error_percent": 5.28,
+      "health_score": 60.0,
+      "status": "DEGRADED"
+    }
+  ],
+  "latency_evaluation": [
+    {
+      "target_latency_ms": 5.0,
+      "measured_mean_latency_ms": 5.1,
+      "measured_p50_latency_ms": 5.1,
+      "measured_p95_latency_ms": 5.85,
+      "measured_p99_latency_ms": 6.19,
+      "measured_max_latency_ms": 6.26,
+      "health_score": 100.0,
+      "status": "CONNECTED"
+    },
+    {
+      "target_latency_ms": 20.0,
+      "measured_mean_latency_ms": 20.12,
+      "measured_p50_latency_ms": 20.2,
+      "measured_p95_latency_ms": 23.42,
+      "measured_p99_latency_ms": 23.96,
+      "measured_max_latency_ms": 24.28,
+      "health_score": 100.0,
+      "status": "CONNECTED"
+    },
+    {
+      "target_latency_ms": 50.0,
+      "measured_mean_latency_ms": 50.55,
+      "measured_p50_latency_ms": 50.57,
+      "measured_p95_latency_ms": 60.02,
+      "measured_p99_latency_ms": 61.74,
+      "measured_max_latency_ms": 62.2,
+      "health_score": 100.0,
+      "status": "CONNECTED"
+    },
+    {
+      "target_latency_ms": 100.0,
+      "measured_mean_latency_ms": 99.58,
+      "measured_p50_latency_ms": 99.8,
+      "measured_p95_latency_ms": 116.34,
+      "measured_p99_latency_ms": 124.08,
+      "measured_max_latency_ms": 125.8,
+      "health_score": 100.0,
+      "status": "CONNECTED"
+    },
+    {
+      "target_latency_ms": 200.0,
+      "measured_mean_latency_ms": 204.71,
+      "measured_p50_latency_ms": 205.09,
+      "measured_p95_latency_ms": 239.03,
+      "measured_p99_latency_ms": 247.31,
+      "measured_max_latency_ms": 252.03,
+      "health_score": 75.0,
+      "status": "DEGRADED"
+    }
+  ],
+  "jitter_evaluation": [
+    {
+      "configured_jitter_std_ms": 0.0,
+      "base_latency_ms": 30.0,
+      "measured_jitter_ms": 0.0,
+      "avg_latency_ms": 30.0,
+      "health_score": 100.0,
+      "status": "CONNECTED"
+    },
+    {
+      "configured_jitter_std_ms": 2.0,
+      "base_latency_ms": 30.0,
+      "measured_jitter_ms": 2.19,
+      "avg_latency_ms": 30.0,
+      "health_score": 100.0,
+      "status": "CONNECTED"
+    },
+    {
+      "configured_jitter_std_ms": 5.0,
+      "base_latency_ms": 30.0,
+      "measured_jitter_ms": 5.75,
+      "avg_latency_ms": 30.24,
+      "health_score": 100.0,
+      "status": "CONNECTED"
+    },
+    {
+      "configured_jitter_std_ms": 10.0,
+      "base_latency_ms": 30.0,
+      "measured_jitter_ms": 9.8,
+      "avg_latency_ms": 29.47,
+      "health_score": 100.0,
+      "status": "CONNECTED"
+    },
+    {
+      "configured_jitter_std_ms": 20.0,
+      "base_latency_ms": 30.0,
+      "measured_jitter_ms": 23.62,
+      "avg_latency_ms": 30.05,
+      "health_score": 100.0,
+      "status": "CONNECTED"
+    },
+    {
+      "configured_jitter_std_ms": 40.0,
+      "base_latency_ms": 30.0,
+      "measured_jitter_ms": 33.07,
+      "avg_latency_ms": 36.19,
+      "health_score": 98.5,
+      "status": "DEGRADED"
+    }
+  ],
+  "interruption_recovery_evaluation": {
+    "timeout_threshold_seconds": 2.0,
+    "phase_a_normal": {
+      "status": "CONNECTED",
+      "health_score": 100.0,
+      "packets_sent": 10
+    },
+    "phase_b_interruption": {
+      "silence_duration_seconds": 2.5,
+      "interruption_detected": true,
+      "detected_status": "INTERRUPTED",
+      "interruption_duration": 2.59,
+      "cumulative_interruptions": 1
+    },
+    "phase_c_recovery": {
+      "recovery_detected": true,
+      "detected_status": "RECOVERING",
+      "final_health_score": 95.0
+    },
+    "transition_sequence_valid": true
+  }
+}

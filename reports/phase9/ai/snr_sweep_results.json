@@ -1,0 +1,338 @@
+{
+  "metadata": {
+    "experiment_id": "EXP-AI-02",
+    "experiment_name": "snr_sweep_evaluation",
+    "description": "Systematic evaluation of modulation classification accuracy and confidence across SNR sweep (-5 to +20 dB).",
+    "random_seed": 42,
+    "timestamp": "2026-10-19T07:10:12.660461+00:00",
+    "dataset_version": "v1.0",
+    "model_version": "v1.0",
+    "model_path": "/Users/sivas_mac/projects/SpectrumSentry-AI/backend/models/modulation_mlp_v1.joblib",
+    "dataset_dir": "/Users/sivas_mac/projects/SpectrumSentry-AI/backend/data/datasets",
+    "output_dir": "/Users/sivas_mac/projects/SpectrumSentry-AI/reports/phase9",
+    "parameters": {
+      "snr_min_db": -5.0,
+      "snr_max_db": 20.0,
+      "snr_step_db": 1.0,
+      "total_snr_levels": 26
+    },
+    "environment": {
+      "os_name": "Darwin",
+      "os_release": "25.6.0",
+      "os_version": "Darwin Kernel Version 25.6.0: Fri Jul 31 19:16:20 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T8142",
+      "machine_architecture": "arm64",
+      "processor": "arm",
+      "python_version": "3.12.15",
+      "numpy_version": "2.5.4",
+      "scipy_version": "1.18.1",
+      "sklearn_version": "1.9.1",
+      "matplotlib_version": "3.11.2",
+      "pid": 76178
+    }
+  },
+  "regimes_summary": {
+    "low_snr_region": {
+      "range_db": "[-5, -1]",
+      "mean_accuracy": 0.7733,
+      "characterization": "Noise-dominated regime with constellation point overlap."
+    },
+    "transition_region": {
+      "range_db": "[0, 5]",
+      "mean_accuracy": 0.9683,
+      "characterization": "Rapid accuracy ramp from ~85% to >97% as constellation clusters separate."
+    },
+    "high_confidence_region": {
+      "range_db": "[6, 20]",
+      "mean_accuracy": 1.0,
+      "characterization": "Near-deterministic classification (>99%) with high confidence."
+    }
+  },
+  "snr_sweep": [
+    {
+      "snr_db": -5.0,
+      "samples": 300,
+      "overall_accuracy": 0.7367,
+      "macro_f1": 0.7363,
+      "mean_confidence": 0.7589,
+      "std_confidence": 0.1878,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 0.57,
+      "16_qam_accuracy": 0.64
+    },
+    {
+      "snr_db": -4.0,
+      "samples": 300,
+      "overall_accuracy": 0.7267,
+      "macro_f1": 0.7253,
+      "mean_confidence": 0.7608,
+      "std_confidence": 0.1842,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 0.52,
+      "16_qam_accuracy": 0.66
+    },
+    {
+      "snr_db": -3.0,
+      "samples": 300,
+      "overall_accuracy": 0.7933,
+      "macro_f1": 0.792,
+      "mean_confidence": 0.78,
+      "std_confidence": 0.1792,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 0.61,
+      "16_qam_accuracy": 0.77
+    },
+    {
+      "snr_db": -2.0,
+      "samples": 300,
+      "overall_accuracy": 0.7533,
+      "macro_f1": 0.7508,
+      "mean_confidence": 0.7984,
+      "std_confidence": 0.1771,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 0.53,
+      "16_qam_accuracy": 0.73
+    },
+    {
+      "snr_db": -1.0,
+      "samples": 300,
+      "overall_accuracy": 0.8567,
+      "macro_f1": 0.8561,
+      "mean_confidence": 0.8589,
+      "std_confidence": 0.1516,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 0.72,
+      "16_qam_accuracy": 0.85
+    },
+    {
+      "snr_db": 0.0,
+      "samples": 300,
+      "overall_accuracy": 0.92,
+      "macro_f1": 0.92,
+      "mean_confidence": 0.9023,
+      "std_confidence": 0.1339,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 0.87,
+      "16_qam_accuracy": 0.89
+    },
+    {
+      "snr_db": 1.0,
+      "samples": 300,
+      "overall_accuracy": 0.9233,
+      "macro_f1": 0.9232,
+      "mean_confidence": 0.9232,
+      "std_confidence": 0.1248,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 0.92,
+      "16_qam_accuracy": 0.85
+    },
+    {
+      "snr_db": 2.0,
+      "samples": 300,
+      "overall_accuracy": 0.99,
+      "macro_f1": 0.99,
+      "mean_confidence": 0.9641,
+      "std_confidence": 0.0763,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 0.99,
+      "16_qam_accuracy": 0.98
+    },
+    {
+      "snr_db": 3.0,
+      "samples": 300,
+      "overall_accuracy": 0.99,
+      "macro_f1": 0.99,
+      "mean_confidence": 0.9781,
+      "std_confidence": 0.0604,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 0.98,
+      "16_qam_accuracy": 0.99
+    },
+    {
+      "snr_db": 4.0,
+      "samples": 300,
+      "overall_accuracy": 0.99,
+      "macro_f1": 0.99,
+      "mean_confidence": 0.9816,
+      "std_confidence": 0.0674,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 0.99,
+      "16_qam_accuracy": 0.98
+    },
+    {
+      "snr_db": 5.0,
+      "samples": 300,
+      "overall_accuracy": 0.9967,
+      "macro_f1": 0.9967,
+      "mean_confidence": 0.9955,
+      "std_confidence": 0.021,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 1.0,
+      "16_qam_accuracy": 0.99
+    },
+    {
+      "snr_db": 6.0,
+      "samples": 300,
+      "overall_accuracy": 1.0,
+      "macro_f1": 1.0,
+      "mean_confidence": 0.9971,
+      "std_confidence": 0.0176,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 1.0,
+      "16_qam_accuracy": 1.0
+    },
+    {
+      "snr_db": 7.0,
+      "samples": 300,
+      "overall_accuracy": 1.0,
+      "macro_f1": 1.0,
+      "mean_confidence": 0.9978,
+      "std_confidence": 0.0281,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 1.0,
+      "16_qam_accuracy": 1.0
+    },
+    {
+      "snr_db": 8.0,
+      "samples": 300,
+      "overall_accuracy": 1.0,
+      "macro_f1": 1.0,
+      "mean_confidence": 0.9997,
+      "std_confidence": 0.0015,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 1.0,
+      "16_qam_accuracy": 1.0
+    },
+    {
+      "snr_db": 9.0,
+      "samples": 300,
+      "overall_accuracy": 1.0,
+      "macro_f1": 1.0,
+      "mean_confidence": 0.9997,
+      "std_confidence": 0.0009,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 1.0,
+      "16_qam_accuracy": 1.0
+    },
+    {
+      "snr_db": 10.0,
+      "samples": 300,
+      "overall_accuracy": 1.0,
+      "macro_f1": 1.0,
+      "mean_confidence": 0.9998,
+      "std_confidence": 0.0008,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 1.0,
+      "16_qam_accuracy": 1.0
+    },
+    {
+      "snr_db": 11.0,
+      "samples": 300,
+      "overall_accuracy": 1.0,
+      "macro_f1": 1.0,
+      "mean_confidence": 1.0,
+      "std_confidence": 0.0002,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 1.0,
+      "16_qam_accuracy": 1.0
+    },
+    {
+      "snr_db": 12.0,
+      "samples": 300,
+      "overall_accuracy": 1.0,
+      "macro_f1": 1.0,
+      "mean_confidence": 0.9998,
+      "std_confidence": 0.0018,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 1.0,
+      "16_qam_accuracy": 1.0
+    },
+    {
+      "snr_db": 13.0,
+      "samples": 300,
+      "overall_accuracy": 1.0,
+      "macro_f1": 1.0,
+      "mean_confidence": 0.9999,
+      "std_confidence": 0.0005,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 1.0,
+      "16_qam_accuracy": 1.0
+    },
+    {
+      "snr_db": 14.0,
+      "samples": 300,
+      "overall_accuracy": 1.0,
+      "macro_f1": 1.0,
+      "mean_confidence": 1.0,
+      "std_confidence": 0.0001,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 1.0,
+      "16_qam_accuracy": 1.0
+    },
+    {
+      "snr_db": 15.0,
+      "samples": 300,
+      "overall_accuracy": 1.0,
+      "macro_f1": 1.0,
+      "mean_confidence": 1.0,
+      "std_confidence": 0.0001,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 1.0,
+      "16_qam_accuracy": 1.0
+    },
+    {
+      "snr_db": 16.0,
+      "samples": 300,
+      "overall_accuracy": 1.0,
+      "macro_f1": 1.0,
+      "mean_confidence": 1.0,
+      "std_confidence": 0.0001,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 1.0,
+      "16_qam_accuracy": 1.0
+    },
+    {
+      "snr_db": 17.0,
+      "samples": 300,
+      "overall_accuracy": 1.0,
+      "macro_f1": 1.0,
+      "mean_confidence": 1.0,
+      "std_confidence": 0.0001,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 1.0,
+      "16_qam_accuracy": 1.0
+    },
+    {
+      "snr_db": 18.0,
+      "samples": 300,
+      "overall_accuracy": 1.0,
+      "macro_f1": 1.0,
+      "mean_confidence": 1.0,
+      "std_confidence": 0.0,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 1.0,
+      "16_qam_accuracy": 1.0
+    },
+    {
+      "snr_db": 19.0,
+      "samples": 300,
+      "overall_accuracy": 1.0,
+      "macro_f1": 1.0,
+      "mean_confidence": 1.0,
+      "std_confidence": 0.0,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 1.0,
+      "16_qam_accuracy": 1.0
+    },
+    {
+      "snr_db": 20.0,
+      "samples": 300,
+      "overall_accuracy": 1.0,
+      "macro_f1": 1.0,
+      "mean_confidence": 1.0,
+      "std_confidence": 0.0,
+      "bpsk_accuracy": 1.0,
+      "qpsk_accuracy": 1.0,
+      "16_qam_accuracy": 1.0
+    }
+  ]
+}

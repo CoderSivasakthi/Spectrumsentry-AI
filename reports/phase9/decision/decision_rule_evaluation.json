@@ -1,0 +1,194 @@
+{
+  "metadata": {
+    "experiment_id": "EXP-DEC-01",
+    "experiment_name": "decision_engine_evaluation",
+    "description": "Verification of all 7 Phase 6 decision rules, cross-domain conflict scenarios, and partial evidence.",
+    "random_seed": 42,
+    "timestamp": "2026-10-19T07:10:14.757434+00:00",
+    "dataset_version": "v1.0",
+    "model_version": "v1.0",
+    "model_path": "/Users/sivas_mac/projects/SpectrumSentry-AI/backend/models/modulation_mlp_v1.joblib",
+    "dataset_dir": "/Users/sivas_mac/projects/SpectrumSentry-AI/backend/data/datasets",
+    "output_dir": "/Users/sivas_mac/projects/SpectrumSentry-AI/reports/phase9",
+    "parameters": {
+      "rules_tested": 7,
+      "partial_scenarios_tested": 3
+    },
+    "environment": {
+      "os_name": "Darwin",
+      "os_release": "25.6.0",
+      "os_version": "Darwin Kernel Version 25.6.0: Fri Jul 31 19:16:20 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T8142",
+      "machine_architecture": "arm64",
+      "processor": "arm",
+      "python_version": "3.12.15",
+      "numpy_version": "2.5.4",
+      "scipy_version": "1.18.1",
+      "sklearn_version": "1.9.1",
+      "matplotlib_version": "3.11.2",
+      "pid": 76178
+    }
+  },
+  "summary": {
+    "total_rules_evaluated": 7,
+    "all_rules_passed": true,
+    "partial_evidence_scenarios_evaluated": 3,
+    "all_partial_passed": true
+  },
+  "rule_coverage": [
+    {
+      "rule_id": "RULE_INTERRUPTED_LINK",
+      "scenario_name": "Active Communication Timeout",
+      "expected_status": "INTERRUPTED",
+      "actual_status": "INTERRUPTED",
+      "expected_consistency": "UNCORRELATED",
+      "actual_consistency": "UNCORRELATED",
+      "decision_confidence": 0.98,
+      "primary_reason": "Communication link is currently interrupted; no test packets received within timeout.",
+      "rules_triggered": [
+        "RULE_INTERRUPTED_LINK"
+      ],
+      "recommendations_count": 3,
+      "status_matched": true,
+      "consistency_matched": true,
+      "rule_matched": true,
+      "passed": true
+    },
+    {
+      "rule_id": "RULE_RECOVERING_LINK",
+      "scenario_name": "Link Recovery Restabilization",
+      "expected_status": "RECOVERING",
+      "actual_status": "RECOVERING",
+      "expected_consistency": "CONSISTENT",
+      "actual_consistency": "CONSISTENT",
+      "decision_confidence": 0.86,
+      "primary_reason": "Communication resumed after a detected interruption; link is restabilizing.",
+      "rules_triggered": [
+        "RULE_RECOVERING_LINK"
+      ],
+      "recommendations_count": 2,
+      "status_matched": true,
+      "consistency_matched": true,
+      "rule_matched": true,
+      "passed": true
+    },
+    {
+      "rule_id": "RULE_CONFLICT_HIGH_SNR_HIGH_LOSS",
+      "scenario_name": "Conflict A: High SNR with Severe Loss",
+      "expected_status": "REVIEW",
+      "actual_status": "REVIEW",
+      "expected_consistency": "CONFLICTING",
+      "actual_consistency": "CONFLICTING",
+      "decision_confidence": 0.65,
+      "primary_reason": "Conflicting observations: The physical layer exhibits strong signal-to-noise ratio, yet the application layer experiences severe packet loss. This divergence indicates network/buffer congestion or host processing bottlenecks rather than RF degradation.",
+      "rules_triggered": [
+        "RULE_CONFLICT_HIGH_SNR_HIGH_LOSS"
+      ],
+      "recommendations_count": 2,
+      "status_matched": true,
+      "consistency_matched": true,
+      "rule_matched": true,
+      "passed": true
+    },
+    {
+      "rule_id": "RULE_CONFLICT_CLEAN_COMM_LOW_CONFIDENCE",
+      "scenario_name": "Conflict B: Clean Comm with Low AI Confidence",
+      "expected_status": "REVIEW",
+      "actual_status": "REVIEW",
+      "expected_consistency": "CONFLICTING",
+      "actual_consistency": "CONFLICTING",
+      "decision_confidence": 0.65,
+      "primary_reason": "Conflicting observations: Packet transport is functioning cleanly with 0% loss, but AI modulation confidence is below threshold. Signal may have phase/frequency distortion or out-of-distribution constellation characteristics.",
+      "rules_triggered": [
+        "RULE_CONFLICT_CLEAN_COMM_LOW_CONFIDENCE"
+      ],
+      "recommendations_count": 2,
+      "status_matched": true,
+      "consistency_matched": true,
+      "rule_matched": true,
+      "passed": true
+    },
+    {
+      "rule_id": "RULE_DEGRADED_NETWORK",
+      "scenario_name": "Elevated Packet Loss Network Degradation",
+      "expected_status": "DEGRADED",
+      "actual_status": "DEGRADED",
+      "expected_consistency": "CONSISTENT",
+      "actual_consistency": "CONSISTENT",
+      "decision_confidence": 0.85,
+      "primary_reason": "Communication performance is degraded due to network packet loss, latency, or jitter.",
+      "rules_triggered": [
+        "RULE_DEGRADED_NETWORK"
+      ],
+      "recommendations_count": 2,
+      "status_matched": true,
+      "consistency_matched": true,
+      "rule_matched": true,
+      "passed": true
+    },
+    {
+      "rule_id": "RULE_DEGRADED_SIGNAL",
+      "scenario_name": "Sub-zero Negative SNR Degradation",
+      "expected_status": "DEGRADED",
+      "actual_status": "DEGRADED",
+      "expected_consistency": "CONSISTENT",
+      "actual_consistency": "CONSISTENT",
+      "decision_confidence": 0.85,
+      "primary_reason": "Physical-layer signal degradation detected; low SNR observed.",
+      "rules_triggered": [
+        "RULE_DEGRADED_SIGNAL"
+      ],
+      "recommendations_count": 2,
+      "status_matched": true,
+      "consistency_matched": true,
+      "rule_matched": true,
+      "passed": true
+    },
+    {
+      "rule_id": "RULE_NORMAL_OPERATION",
+      "scenario_name": "Nominal Wireless & Network Operation",
+      "expected_status": "NORMAL",
+      "actual_status": "NORMAL",
+      "expected_consistency": "CONSISTENT",
+      "actual_consistency": "CONSISTENT",
+      "decision_confidence": 0.99,
+      "primary_reason": "Communication link operates within normal parameters with verified signal quality and stable transport.",
+      "rules_triggered": [
+        "RULE_NORMAL_OPERATION"
+      ],
+      "recommendations_count": 2,
+      "status_matched": true,
+      "consistency_matched": true,
+      "rule_matched": true,
+      "passed": true
+    }
+  ],
+  "partial_evidence": [
+    {
+      "scenario": "Communication Evidence Only (No Signal)",
+      "expected_status": "NORMAL",
+      "actual_status": "NORMAL",
+      "expected_consistency": "UNCORRELATED",
+      "actual_consistency": "UNCORRELATED",
+      "decision_confidence": 0.94,
+      "passed": true
+    },
+    {
+      "scenario": "Signal Evidence Only (No Comm)",
+      "expected_status": "NORMAL",
+      "actual_status": "NORMAL",
+      "expected_consistency": "UNCORRELATED",
+      "actual_consistency": "UNCORRELATED",
+      "decision_confidence": 0.94,
+      "passed": true
+    },
+    {
+      "scenario": "Neither Evidence Domain Available",
+      "expected_status": "NORMAL",
+      "actual_status": "NORMAL",
+      "expected_consistency": "UNCORRELATED",
+      "actual_consistency": "UNCORRELATED",
+      "decision_confidence": 0.5,
+      "passed": true
+    }
+  ]
+}

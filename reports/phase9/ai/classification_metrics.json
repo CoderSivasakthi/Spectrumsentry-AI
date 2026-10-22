@@ -1,0 +1,224 @@
+{
+  "metadata": {
+    "experiment_id": "EXP-AI-01",
+    "experiment_name": "ai_classification_evaluation",
+    "description": "Complete scientific evaluation of Phase 4 modulation classifier on held-out test data.",
+    "random_seed": 42,
+    "timestamp": "2026-10-19T07:10:12.434984+00:00",
+    "dataset_version": "v1.0",
+    "model_version": "v1.0",
+    "model_path": "/Users/sivas_mac/projects/SpectrumSentry-AI/backend/models/modulation_mlp_v1.joblib",
+    "dataset_dir": "/Users/sivas_mac/projects/SpectrumSentry-AI/backend/data/datasets",
+    "output_dir": "/Users/sivas_mac/projects/SpectrumSentry-AI/reports/phase9",
+    "parameters": {
+      "test_samples": 7800,
+      "feature_count": 23,
+      "classes": [
+        "BPSK",
+        "QPSK",
+        "16-QAM"
+      ]
+    },
+    "environment": {
+      "os_name": "Darwin",
+      "os_release": "25.6.0",
+      "os_version": "Darwin Kernel Version 25.6.0: Fri Jul 31 19:16:20 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T8142",
+      "machine_architecture": "arm64",
+      "processor": "arm",
+      "python_version": "3.12.15",
+      "numpy_version": "2.5.4",
+      "scipy_version": "1.18.1",
+      "sklearn_version": "1.9.1",
+      "matplotlib_version": "3.11.2",
+      "pid": 76178
+    }
+  },
+  "summary_metrics": {
+    "test_accuracy": 0.9491,
+    "macro_precision": 0.9493,
+    "macro_recall": 0.9491,
+    "macro_f1": 0.9491,
+    "weighted_f1": 0.9491,
+    "total_test_samples": 7800
+  },
+  "per_class_metrics": {
+    "BPSK": {
+      "class_index": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "mean_confidence": 0.9996,
+      "support": 2600
+    },
+    "QPSK": {
+      "class_index": 1,
+      "precision": 0.9342,
+      "recall": 0.9115,
+      "f1_score": 0.9227,
+      "mean_confidence": 0.926,
+      "support": 2600
+    },
+    "16-QAM": {
+      "class_index": 2,
+      "precision": 0.9136,
+      "recall": 0.9358,
+      "f1_score": 0.9246,
+      "mean_confidence": 0.9239,
+      "support": 2600
+    }
+  },
+  "confusion_matrix": {
+    "classes": [
+      "BPSK",
+      "QPSK",
+      "16-QAM"
+    ],
+    "matrix_raw": [
+      [
+        2600,
+        0,
+        0
+      ],
+      [
+        0,
+        2370,
+        230
+      ],
+      [
+        0,
+        167,
+        2433
+      ]
+    ],
+    "matrix_normalized": [
+      [
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.9115,
+        0.0885
+      ],
+      [
+        0.0,
+        0.0642,
+        0.9358
+      ]
+    ]
+  },
+  "confidence_analysis": {
+    "overall_mean_confidence": 0.9498,
+    "overall_median_confidence": 0.9999,
+    "overall_std_confidence": 0.1211,
+    "correct_predictions": {
+      "count": 7403,
+      "mean_confidence": 0.9658,
+      "median_confidence": 0.9999,
+      "std_confidence": 0.0987
+    },
+    "incorrect_predictions": {
+      "count": 397,
+      "mean_confidence": 0.6526,
+      "median_confidence": 0.6274,
+      "std_confidence": 0.1153
+    }
+  },
+  "calibration": {
+    "expected_calibration_error": 0.0034,
+    "num_bins": 10,
+    "bins": [
+      {
+        "bin_range": [
+          0.0,
+          0.1
+        ],
+        "sample_count": 0,
+        "accuracy": 0.0,
+        "confidence": 0.0
+      },
+      {
+        "bin_range": [
+          0.1,
+          0.2
+        ],
+        "sample_count": 0,
+        "accuracy": 0.0,
+        "confidence": 0.0
+      },
+      {
+        "bin_range": [
+          0.2,
+          0.3
+        ],
+        "sample_count": 0,
+        "accuracy": 0.0,
+        "confidence": 0.0
+      },
+      {
+        "bin_range": [
+          0.3,
+          0.4
+        ],
+        "sample_count": 0,
+        "accuracy": 0.0,
+        "confidence": 0.0
+      },
+      {
+        "bin_range": [
+          0.4,
+          0.5
+        ],
+        "sample_count": 0,
+        "accuracy": 0.0,
+        "confidence": 0.0
+      },
+      {
+        "bin_range": [
+          0.5,
+          0.6
+        ],
+        "sample_count": 344,
+        "accuracy": 0.5407,
+        "confidence": 0.5492
+      },
+      {
+        "bin_range": [
+          0.6,
+          0.7
+        ],
+        "sample_count": 333,
+        "accuracy": 0.6366,
+        "confidence": 0.6499
+      },
+      {
+        "bin_range": [
+          0.7,
+          0.8
+        ],
+        "sample_count": 256,
+        "accuracy": 0.7148,
+        "confidence": 0.7484
+      },
+      {
+        "bin_range": [
+          0.8,
+          0.9
+        ],
+        "sample_count": 221,
+        "accuracy": 0.8688,
+        "confidence": 0.8513
+      },
+      {
+        "bin_range": [
+          0.9,
+          1.0
+        ],
+        "sample_count": 6646,
+        "accuracy": 0.9976,
+        "confidence": 0.9966
+      }
+    ]
+  }
+}

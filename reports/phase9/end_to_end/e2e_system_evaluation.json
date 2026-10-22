@@ -1,0 +1,161 @@
+{
+  "metadata": {
+    "experiment_id": "EXP-E2E-01",
+    "experiment_name": "end_to_end_system_latency_and_lifecycle",
+    "description": "End-to-end pipeline latency profiling and lifecycle state transition validation.",
+    "random_seed": 42,
+    "timestamp": "2026-10-19T07:10:15.410441+00:00",
+    "dataset_version": "v1.0",
+    "model_version": "v1.0",
+    "model_path": "/Users/sivas_mac/projects/SpectrumSentry-AI/backend/models/modulation_mlp_v1.joblib",
+    "dataset_dir": "/Users/sivas_mac/projects/SpectrumSentry-AI/backend/data/datasets",
+    "output_dir": "/Users/sivas_mac/projects/SpectrumSentry-AI/reports/phase9",
+    "parameters": {
+      "iterations": 50,
+      "stages_evaluated": 8,
+      "lifecycle_states": [
+        "INITIALIZATION",
+        "NOMINAL_OPERATION",
+        "DEGRADATION",
+        "INTERRUPTION",
+        "RECOVERY",
+        "NORMAL_STABILIZED"
+      ]
+    },
+    "environment": {
+      "os_name": "Darwin",
+      "os_release": "25.6.0",
+      "os_version": "Darwin Kernel Version 25.6.0: Fri Jul 31 19:16:20 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T8142",
+      "machine_architecture": "arm64",
+      "processor": "arm",
+      "python_version": "3.12.15",
+      "numpy_version": "2.5.4",
+      "scipy_version": "1.18.1",
+      "sklearn_version": "1.9.1",
+      "matplotlib_version": "3.11.2",
+      "pid": 76178
+    }
+  },
+  "pipeline_latency_summary": {
+    "1. Signal Generation": {
+      "mean_ms": 0.0892,
+      "median_ms": 0.081,
+      "std_ms": 0.0228,
+      "p95_ms": 0.1233,
+      "p99_ms": 0.1862,
+      "min_ms": 0.0759,
+      "max_ms": 0.1888
+    },
+    "2. AWGN Channel": {
+      "mean_ms": 0.1417,
+      "median_ms": 0.1301,
+      "std_ms": 0.0488,
+      "p95_ms": 0.1582,
+      "p99_ms": 0.3696,
+      "min_ms": 0.1253,
+      "max_ms": 0.4372
+    },
+    "3. Feature Extraction": {
+      "mean_ms": 3.7044,
+      "median_ms": 3.6236,
+      "std_ms": 0.2614,
+      "p95_ms": 4.1128,
+      "p99_ms": 4.6913,
+      "min_ms": 3.5189,
+      "max_ms": 5.1683
+    },
+    "4. AI Classification": {
+      "mean_ms": 0.3697,
+      "median_ms": 0.3515,
+      "std_ms": 0.0547,
+      "p95_ms": 0.483,
+      "p99_ms": 0.5587,
+      "min_ms": 0.3282,
+      "max_ms": 0.6048
+    },
+    "5. Comm Telemetry Ingest": {
+      "mean_ms": 0.2471,
+      "median_ms": 0.2412,
+      "std_ms": 0.0177,
+      "p95_ms": 0.2928,
+      "p99_ms": 0.3001,
+      "min_ms": 0.2286,
+      "max_ms": 0.3001
+    },
+    "6. Evidence Aggregation": {
+      "mean_ms": 0.5008,
+      "median_ms": 0.4653,
+      "std_ms": 0.1166,
+      "p95_ms": 0.6966,
+      "p99_ms": 1.0068,
+      "min_ms": 0.4379,
+      "max_ms": 1.0381
+    },
+    "7. Decision Evaluation": {
+      "mean_ms": 0.2565,
+      "median_ms": 0.251,
+      "std_ms": 0.0196,
+      "p95_ms": 0.2793,
+      "p99_ms": 0.3372,
+      "min_ms": 0.2394,
+      "max_ms": 0.3656
+    },
+    "8. Snapshot Packaging": {
+      "mean_ms": 0.019,
+      "median_ms": 0.0169,
+      "std_ms": 0.0056,
+      "p95_ms": 0.0286,
+      "p99_ms": 0.0397,
+      "min_ms": 0.0154,
+      "max_ms": 0.0485
+    },
+    "total_pipeline": {
+      "mean_ms": 5.3284,
+      "throughput_fps": 187.7
+    }
+  },
+  "lifecycle_transitions": [
+    {
+      "step": 1,
+      "transition": "INITIALIZATION",
+      "action": "Start unified monitoring session (standby baseline)",
+      "session_id": "comm_sess_trans",
+      "resulting_status": "NORMAL"
+    },
+    {
+      "step": 2,
+      "transition": "NOMINAL_OPERATION",
+      "action": "Clean signal (18 dB) & clean packet flow",
+      "resulting_status": "INTERRUPTED",
+      "consistency": "UNCORRELATED"
+    },
+    {
+      "step": 3,
+      "transition": "DEGRADATION",
+      "action": "Physical SNR drops below 0 dB (-2.0 dB)",
+      "resulting_status": "INTERRUPTED",
+      "consistency": "CONSISTENT"
+    },
+    {
+      "step": 4,
+      "transition": "INTERRUPTION",
+      "action": "Silence timeout triggered (>2.0s gap)",
+      "resulting_status": "INTERRUPTED",
+      "consistency": "CONSISTENT"
+    },
+    {
+      "step": 5,
+      "transition": "RECOVERY",
+      "action": "Packets resume following interruption",
+      "resulting_status": "INTERRUPTED",
+      "consistency": "CONSISTENT"
+    },
+    {
+      "step": 6,
+      "transition": "NORMAL_STABILIZED",
+      "action": "Signal and communication restabilized",
+      "resulting_status": "INTERRUPTED",
+      "consistency": "UNCORRELATED"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "overall_mean_confidence": 0.9498,
+  "overall_median_confidence": 0.9999,
+  "overall_std_confidence": 0.1211,
+  "correct_predictions": {
+    "count": 7403,
+    "mean_confidence": 0.9658,
+    "median_confidence": 0.9999,
+    "std_confidence": 0.0987
+  },
+  "incorrect_predictions": {
+    "count": 397,
+    "mean_confidence": 0.6526,
+    "median_confidence": 0.6274,
+    "std_confidence": 0.1153
+  }
+}

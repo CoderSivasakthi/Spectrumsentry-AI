@@ -1,0 +1,58 @@
+{
+  "accuracy": 0.9491,
+  "macro_precision": 0.9493,
+  "macro_recall": 0.9491,
+  "macro_f1": 0.9491,
+  "weighted_f1": 0.9491,
+  "total_samples": 7800,
+  "per_class": {
+    "BPSK": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "support": 2600
+    },
+    "QPSK": {
+      "precision": 0.9342,
+      "recall": 0.9115,
+      "f1_score": 0.9227,
+      "support": 2600
+    },
+    "16-QAM": {
+      "precision": 0.9136,
+      "recall": 0.9358,
+      "f1_score": 0.9246,
+      "support": 2600
+    }
+  },
+  "confidence": {
+    "mean_confidence": 0.9498,
+    "median_confidence": 0.9999,
+    "min_confidence": 0.5007,
+    "max_confidence": 1.0,
+    "std_confidence": 0.1211
+  },
+  "confusion_matrix": [
+    [
+      2600,
+      0,
+      0
+    ],
+    [
+      0,
+      2370,
+      230
+    ],
+    [
+      0,
+      167,
+      2433
+    ]
+  ],
+  "class_names": [
+    "BPSK",
+    "QPSK",
+    "16-QAM"
+  ],
+  "inference_time_ms_per_sample": 0.0
+}

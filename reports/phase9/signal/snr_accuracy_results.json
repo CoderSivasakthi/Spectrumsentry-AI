@@ -1,0 +1,68 @@
+[
+  {
+    "target_snr_db": -5.0,
+    "trials": 50,
+    "measured_snr_mean": -5.0061,
+    "measured_snr_std": 0.0931,
+    "mean_error_db": -0.0061,
+    "mean_absolute_error_db": 0.0763,
+    "max_absolute_error_db": 0.2148,
+    "avg_signal_power": 1.0,
+    "avg_noise_power": 3.167468
+  },
+  {
+    "target_snr_db": 0.0,
+    "trials": 50,
+    "measured_snr_mean": 0.026,
+    "measured_snr_std": 0.0752,
+    "mean_error_db": 0.026,
+    "mean_absolute_error_db": 0.0649,
+    "max_absolute_error_db": 0.2145,
+    "avg_signal_power": 1.0,
+    "avg_noise_power": 0.994179
+  },
+  {
+    "target_snr_db": 5.0,
+    "trials": 50,
+    "measured_snr_mean": 4.9941,
+    "measured_snr_std": 0.0827,
+    "mean_error_db": -0.0059,
+    "mean_absolute_error_db": 0.0688,
+    "max_absolute_error_db": 0.1649,
+    "avg_signal_power": 1.0,
+    "avg_noise_power": 0.316717
+  },
+  {
+    "target_snr_db": 10.0,
+    "trials": 50,
+    "measured_snr_mean": 10.0147,
+    "measured_snr_std": 0.0817,
+    "mean_error_db": 0.0147,
+    "mean_absolute_error_db": 0.0623,
+    "max_absolute_error_db": 0.2469,
+    "avg_signal_power": 1.0,
+    "avg_noise_power": 0.09968
+  },
+  {
+    "target_snr_db": 15.0,
+    "trials": 50,
+    "measured_snr_mean": 15.0023,
+    "measured_snr_std": 0.0747,
+    "mean_error_db": 0.0023,
+    "mean_absolute_error_db": 0.0588,
+    "max_absolute_error_db": 0.191,
+    "avg_signal_power": 1.0,
+    "avg_noise_power": 0.031611
+  },
+  {
+    "target_snr_db": 20.0,
+    "trials": 50,
+    "measured_snr_mean": 19.9911,
+    "measured_snr_std": 0.0872,
+    "mean_error_db": -0.0089,
+    "mean_absolute_error_db": 0.0723,
+    "max_absolute_error_db": 0.1906,
+    "avg_signal_power": 1.0,
+    "avg_noise_power": 0.010023
+  }
+]

@@ -1,0 +1,153 @@
+{
+  "metadata": {
+    "experiment_id": "EXP-PERF-01",
+    "experiment_name": "subsystem_performance_benchmarks",
+    "description": "Micro-benchmarking latency percentiles and throughputs across core subsystems.",
+    "random_seed": 42,
+    "timestamp": "2026-10-19T07:10:16.662413+00:00",
+    "dataset_version": "v1.0",
+    "model_version": "v1.0",
+    "model_path": "/Users/sivas_mac/projects/SpectrumSentry-AI/backend/models/modulation_mlp_v1.joblib",
+    "dataset_dir": "/Users/sivas_mac/projects/SpectrumSentry-AI/backend/data/datasets",
+    "output_dir": "/Users/sivas_mac/projects/SpectrumSentry-AI/reports/phase9",
+    "parameters": {
+      "iterations": 200,
+      "warmup": 20
+    },
+    "environment": {
+      "os_name": "Darwin",
+      "os_release": "25.6.0",
+      "os_version": "Darwin Kernel Version 25.6.0: Fri Jul 31 19:16:20 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T8142",
+      "machine_architecture": "arm64",
+      "processor": "arm",
+      "python_version": "3.12.15",
+      "numpy_version": "2.5.4",
+      "scipy_version": "1.18.1",
+      "sklearn_version": "1.9.1",
+      "matplotlib_version": "3.11.2",
+      "pid": 76178
+    }
+  },
+  "benchmarks": [
+    {
+      "operation": "Signal Generation (1024 smp)",
+      "iterations": 200,
+      "mean_ms": 0.04,
+      "median_ms": 0.039,
+      "std_ms": 0.0059,
+      "p95_ms": 0.0419,
+      "p99_ms": 0.0584,
+      "min_ms": 0.0381,
+      "max_ms": 0.1085,
+      "throughput_ops_per_sec": 25011.7
+    },
+    {
+      "operation": "AWGN Noise Channel",
+      "iterations": 200,
+      "mean_ms": 0.0781,
+      "median_ms": 0.0767,
+      "std_ms": 0.0082,
+      "p95_ms": 0.0841,
+      "p99_ms": 0.0932,
+      "min_ms": 0.0755,
+      "max_ms": 0.1858,
+      "throughput_ops_per_sec": 12803.4
+    },
+    {
+      "operation": "FFT Spectrum (1024 pts)",
+      "iterations": 200,
+      "mean_ms": 0.0578,
+      "median_ms": 0.0572,
+      "std_ms": 0.0022,
+      "p95_ms": 0.0622,
+      "p99_ms": 0.0679,
+      "min_ms": 0.0564,
+      "max_ms": 0.0718,
+      "throughput_ops_per_sec": 17310.8
+    },
+    {
+      "operation": "23-Feature Extraction",
+      "iterations": 200,
+      "mean_ms": 2.1872,
+      "median_ms": 2.0702,
+      "std_ms": 0.1755,
+      "p95_ms": 2.4282,
+      "p99_ms": 2.691,
+      "min_ms": 2.006,
+      "max_ms": 2.8494,
+      "throughput_ops_per_sec": 457.2
+    },
+    {
+      "operation": "ML Single Prediction",
+      "iterations": 200,
+      "mean_ms": 0.162,
+      "median_ms": 0.1587,
+      "std_ms": 0.0191,
+      "p95_ms": 0.1695,
+      "p99_ms": 0.2944,
+      "min_ms": 0.151,
+      "max_ms": 0.3251,
+      "throughput_ops_per_sec": 6173.5
+    },
+    {
+      "operation": "ML Batch Prediction (N=16)",
+      "iterations": 200,
+      "mean_ms": 0.1986,
+      "median_ms": 0.197,
+      "std_ms": 0.0131,
+      "p95_ms": 0.2066,
+      "p99_ms": 0.2358,
+      "min_ms": 0.1907,
+      "max_ms": 0.3639,
+      "throughput_ops_per_sec": 5034.7
+    },
+    {
+      "operation": "ML Batch Prediction (N=64)",
+      "iterations": 200,
+      "mean_ms": 0.3466,
+      "median_ms": 0.3242,
+      "std_ms": 0.0628,
+      "p95_ms": 0.423,
+      "p99_ms": 0.5705,
+      "min_ms": 0.308,
+      "max_ms": 1.0122,
+      "throughput_ops_per_sec": 2885.0
+    },
+    {
+      "operation": "ML Batch Prediction (N=256)",
+      "iterations": 200,
+      "mean_ms": 0.7527,
+      "median_ms": 0.7504,
+      "std_ms": 0.0154,
+      "p95_ms": 0.777,
+      "p99_ms": 0.7995,
+      "min_ms": 0.7322,
+      "max_ms": 0.8619,
+      "throughput_ops_per_sec": 1328.6
+    },
+    {
+      "operation": "Decision Engine Evaluation",
+      "iterations": 200,
+      "mean_ms": 0.0125,
+      "median_ms": 0.0124,
+      "std_ms": 0.001,
+      "p95_ms": 0.0129,
+      "p99_ms": 0.0183,
+      "min_ms": 0.012,
+      "max_ms": 0.0224,
+      "throughput_ops_per_sec": 79693.2
+    },
+    {
+      "operation": "Snapshot Serialization",
+      "iterations": 200,
+      "mean_ms": 0.0119,
+      "median_ms": 0.0119,
+      "std_ms": 0.0003,
+      "p95_ms": 0.0122,
+      "p99_ms": 0.013,
+      "min_ms": 0.0115,
+      "max_ms": 0.0143,
+      "throughput_ops_per_sec": 83683.7
+    }
+  ]
+}
