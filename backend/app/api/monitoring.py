@@ -9,6 +9,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from backend.app.database.database import get_db
+from backend.app.database.models import Alert as AlertModel, utc_now
+from backend.app.database.repository import (
+    AlertRepository,
+    CommunicationEventRepository,
+    CommunicationSessionRepository,
+    DecisionRepository,
+    MonitoringSessionRepository,
+)
 from backend.app.monitoring.unified_manager import unified_monitor
 from backend.app.schemas.monitoring import (
     MonitoringHistoryResponse,
@@ -210,6 +218,177 @@ async def simulate_signal(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Signal simulation failed: {str(exc)}",
         ) from exc
+
+
+@router.get(
+    "/session/{session_id}/report",
+    summary="Get full report for a monitoring session",
+    description=(
+        "Aggregates the monitoring session, its linked communication session, "
+        "communication events, decision records, and system alerts into one "
+        "downloadable report payload."
+    ),
+)
+async def get_session_report(
+    session_id: str,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Build a complete report for the selected monitoring session."""
+    mon_repo = MonitoringSessionRepository(db)
+    mon = mon_repo.get_by_id(session_id)
+    if not mon:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Monitoring session '{session_id}' not found.",
+        )
+
+    started = mon.started_at
+    ended = mon.ended_at
+
+    comm_summary: Optional[Dict[str, Any]] = None
+    comm_events: List[Dict[str, Any]] = []
+    if mon.communication_session_id:
+        comm_repo = CommunicationSessionRepository(db)
+        comm = comm_repo.get_by_session_id(mon.communication_session_id)
+        if comm:
+            comm_summary = {
+                "session_id": comm.session_id,
+                "started_at": comm.started_at.isoformat() if comm.started_at else None,
+                "ended_at": comm.ended_at.isoformat() if comm.ended_at else None,
+                "packets_sent": comm.packets_sent,
+                "packets_received": comm.packets_received,
+                "packets_lost": comm.packets_lost,
+                "packet_loss_percent": comm.packet_loss_percent,
+                "avg_latency_ms": comm.avg_latency_ms,
+                "min_latency_ms": comm.min_latency_ms,
+                "max_latency_ms": comm.max_latency_ms,
+                "median_latency_ms": comm.median_latency_ms,
+                "p95_latency_ms": comm.p95_latency_ms,
+                "p99_latency_ms": comm.p99_latency_ms,
+                "jitter_ms": comm.jitter_ms,
+                "throughput_bps": comm.throughput_bps,
+                "interruption_count": comm.interruption_count,
+                "total_interruption_duration_ms": comm.total_interruption_duration_ms,
+                "recovery_count": comm.recovery_count,
+                "health_score": comm.health_score,
+                "final_status": comm.final_status,
+                "extra_metadata": comm.extra_metadata,
+            }
+        ev_repo = CommunicationEventRepository(db)
+        evs = ev_repo.get_by_session_id(mon.communication_session_id)
+        comm_events = [
+            {
+                "id": e.id,
+                "event_type": e.event_type,
+                "timestamp": e.timestamp.isoformat() if e.timestamp else None,
+                "duration_ms": e.duration_ms,
+                "sequence_number": e.sequence_number,
+                "details": e.details,
+            }
+            for e in evs
+        ]
+
+    # Decision records linked to this monitoring session
+    dec_repo = DecisionRepository(db)
+    all_decs = dec_repo.get_all(skip=0, limit=10000)
+    dec_records: List[Dict[str, Any]] = []
+    for d in all_decs:
+        meta = d.extra_metadata or {}
+        linked = meta.get("monitoring_session_id") == session_id
+        if not linked and started is not None and d.timestamp is not None:
+            if started <= d.timestamp and (ended is None or d.timestamp <= ended):
+                linked = True
+        if linked:
+            dec_records.append(
+                {
+                    "id": d.id,
+                    "timestamp": d.timestamp.isoformat() if d.timestamp else None,
+                    "overall_status": d.overall_status,
+                    "decision_confidence": d.decision_confidence,
+                    "consistency": d.consistency,
+                    "primary_reason": d.primary_reason,
+                    "contributing_factors": d.contributing_factors,
+                    "rules_triggered": d.rules_triggered,
+                    "signal_summary": d.signal_summary,
+                    "communication_summary": d.communication_summary,
+                    "recommendations": d.recommendations,
+                    "extra_metadata": d.extra_metadata,
+                }
+            )
+    # Fall back to the in-memory latest snapshot for sessions that have not
+    # been stopped yet (decision records are persisted on stop to avoid
+    # per-packet DB bloat).
+    if not dec_records:
+        snap = unified_monitor.latest_snapshot
+        if snap is not None and snap.monitoring_session_id == session_id:
+            d = snap.decision
+            dec_records.append(
+                {
+                    "id": None,
+                    "timestamp": snap.timestamp.isoformat() if snap.timestamp else None,
+                    "overall_status": (
+                        d.status.value if hasattr(d.status, "value") else str(d.status)
+                    ),
+                    "decision_confidence": d.confidence,
+                    "consistency": (
+                        d.consistency.value
+                        if hasattr(d.consistency, "value")
+                        else str(d.consistency)
+                    ),
+                    "primary_reason": d.primary_reason,
+                    "contributing_factors": d.contributing_factors,
+                    "rules_triggered": [],
+                    "signal_summary": None,
+                    "communication_summary": None,
+                    "recommendations": d.recommendations,
+                    "extra_metadata": {"source": "live_snapshot"},
+                }
+            )
+    dec_records.sort(key=lambda x: x["timestamp"] or "")
+
+    # Alerts within the session time window
+    q = db.query(AlertModel)
+    if started is not None:
+        q = q.filter(AlertModel.timestamp >= started)
+    if ended is not None:
+        q = q.filter(AlertModel.timestamp <= ended)
+    alerts_db = q.order_by(AlertModel.timestamp.asc()).all()
+    alerts = [
+        {
+            "id": a.id,
+            "timestamp": a.timestamp.isoformat() if a.timestamp else None,
+            "severity": a.severity,
+            "category": a.category,
+            "message": a.message,
+            "source": a.source,
+            "resolved": a.resolved,
+            "extra_data": a.extra_data,
+        }
+        for a in alerts_db
+    ]
+
+    duration_seconds = None
+    if started and ended:
+        duration_seconds = (ended - started).total_seconds()
+
+    return {
+        "generated_at": utc_now().isoformat(),
+        "monitoring_session": {
+            "id": mon.id,
+            "monitoring_session_id": mon.monitoring_session_id,
+            "communication_session_id": mon.communication_session_id,
+            "created_at": mon.created_at.isoformat() if mon.created_at else None,
+            "started_at": started.isoformat() if started else None,
+            "ended_at": ended.isoformat() if ended else None,
+            "status": mon.status,
+            "extra_metadata": mon.extra_metadata,
+            "duration_seconds": duration_seconds,
+        },
+        "communication_session": comm_summary,
+        "communication_events": comm_events,
+        "decision_records": dec_records,
+        "alerts": alerts,
+    }
 
 
 @router.get(

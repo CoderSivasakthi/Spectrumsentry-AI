@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getMonitoringHistory } from '../../api/monitoring';
+import { getMonitoringHistory, getMonitoringSessionReport } from '../../api/monitoring';
 import { MonitoringSessionSummary } from '../../types/monitoring';
 import { StatusBadge } from '../common/StatusBadge';
 import { LoadingState, EmptyState } from '../common/States';
@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Eye,
   X,
+  Download,
 } from 'lucide-react';
 
 export interface HistoryTableProps {
@@ -29,7 +30,71 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(autoFetch && !initialSessions);
   const [error, setError] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<MonitoringSessionSummary | null>(null);
+  const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  const escapeCsv = (value: unknown): string => {
+    const text = value === null || value === undefined ? '' : String(value);
+    return `"${text.replace(/"/g, '""')}"`;
+  };
+
+  // Flatten nested report into a two-column CSV: a dotted-path key and its scalar value.
+  const flattenObject = (obj: unknown, prefix = ''): Array<[string, string]> => {
+    const rows: Array<[string, string]> = [];
+    if (obj === null || obj === undefined) {
+      rows.push([prefix || 'root', '']);
+    } else if (Array.isArray(obj)) {
+      if (obj.length === 0) {
+        rows.push([`${prefix} (count)`, '0']);
+      } else {
+        obj.forEach((item, i) => rows.push(...flattenObject(item, `${prefix}.${i}`)));
+      }
+    } else if (typeof obj === 'object') {
+      for (const [k, v] of Object.entries(obj)) {
+        const p = prefix ? `${prefix}.${k}` : k;
+        rows.push(...flattenObject(v, p));
+      }
+    } else {
+      rows.push([prefix, String(obj)]);
+    }
+    return rows;
+  };
+
+  const handleDownloadReport = async (
+    session: MonitoringSessionSummary,
+    format: 'json' | 'csv' = 'json'
+  ) => {
+    const isCsv = format === 'csv';
+    if (isCsv) {
+      setIsDownloading(true);
+    } else {
+      setIsDownloading(true);
+    }
+    try {
+      const report = await getMonitoringSessionReport(session.monitoring_session_id);
+      const blob = isCsv
+        ? (() => {
+            const rows = flattenObject(report);
+            const csv = ['path,value', ...rows.map(([p, v]) => `${escapeCsv(p)},${escapeCsv(v)}`)].join(
+              '\n'
+            );
+            return new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+          })()
+        : new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${session.monitoring_session_id}_report.${isCsv ? 'csv' : 'json'}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to download session report.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const fetchHistory = async (offset = skip) => {
     setIsLoading(true);
@@ -143,13 +208,33 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
                       <StatusBadge status={sess.status} size="sm" />
                     </td>
                     <td style={{ textAlign: 'right' }}>
-                      <button
-                        onClick={() => setSelectedSession(sess)}
-                        className="btn btn--ghost btn--sm"
-                      >
-                        <Eye size={13} />
-                        <span>Inspect</span>
-                      </button>
+                      <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-1)' }}>
+                        <button
+                          onClick={() => handleDownloadReport(sess, 'json')}
+                          className="btn btn--ghost btn--sm"
+                          disabled={isDownloading}
+                          aria-label={`Download JSON report for ${sess.monitoring_session_id}`}
+                        >
+                          <Download size={13} />
+                          <span>JSON</span>
+                        </button>
+                        <button
+                          onClick={() => handleDownloadReport(sess, 'csv')}
+                          className="btn btn--ghost btn--sm"
+                          disabled={isDownloading}
+                          aria-label={`Download CSV report for ${sess.monitoring_session_id}`}
+                        >
+                          <Download size={13} />
+                          <span>CSV</span>
+                        </button>
+                        <button
+                          onClick={() => setSelectedSession(sess)}
+                          className="btn btn--ghost btn--sm"
+                        >
+                          <Eye size={13} />
+                          <span>Inspect</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -280,7 +365,23 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
               </div>
             )}
 
-            <div style={{ marginTop: 'var(--space-4)', textAlign: 'right' }}>
+            <div className="row--between row" style={{ marginTop: 'var(--space-4)' }}>
+              <button
+                className="btn btn--secondary btn--sm"
+                onClick={() => selectedSession && handleDownloadReport(selectedSession)}
+                disabled={isDownloading}
+              >
+                <Download size={13} />
+                <span>Download JSON</span>
+              </button>
+              <button
+                className="btn btn--secondary btn--sm"
+                onClick={() => selectedSession && handleDownloadReport(selectedSession, 'csv')}
+                disabled={isDownloading}
+              >
+                <Download size={13} />
+                <span>Download CSV</span>
+              </button>
               <button className="btn btn--secondary" onClick={() => setSelectedSession(null)}>
                 <span>Close</span>
               </button>

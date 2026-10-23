@@ -122,3 +122,12 @@ export const getMonitoringHistory = async (
   );
   return response.data;
 };
+
+export const getMonitoringSessionReport = async (
+  sessionId: string
+): Promise<Record<string, any>> => {
+  const response = await apiClient.get<Record<string, any>>(
+    `/api/monitoring/session/${encodeURIComponent(sessionId)}/report`
+  );
+  return response.data;
+};

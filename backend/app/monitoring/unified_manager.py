@@ -165,6 +165,12 @@ class UnifiedMonitoringManager:
         if not db_sess:
             raise ValueError(f"Monitoring session '{target_id}' not found.")
 
+        # Persist a final decision record so the session report is complete
+        try:
+            self.get_current_snapshot(db=db, persist_decision=True)
+        except Exception as exc:
+            logger.debug("Final decision persistence failed: %s", exc)
+
         # Stop communication session if requested and linked
         if request.stop_communication and self.active_communication_session_id:
             try:
@@ -473,7 +479,10 @@ class UnifiedMonitoringManager:
         )
 
     def get_current_snapshot(
-        self, db: Optional[Session] = None, session_id: Optional[str] = None
+        self,
+        db: Optional[Session] = None,
+        session_id: Optional[str] = None,
+        persist_decision: bool = False,
     ) -> UnifiedMonitoringSnapshot:
         """Assemble the complete real-time cross-domain monitoring snapshot.
 
@@ -557,7 +566,7 @@ class UnifiedMonitoringManager:
             )
             try:
                 dec_result: DecisionResult = decision_engine.evaluate(
-                    decision_input, db=db, persist=False
+                    decision_input, db=db, persist=persist_decision
                 )
 
                 severity = (
@@ -604,11 +613,58 @@ class UnifiedMonitoringManager:
                 dec_snapshot.status == OverallStatus.NORMAL
                 and dec_snapshot.severity == "INFO"
             )
+            alert_repo = AlertRepository(db)
             if healthy_baseline:
                 try:
-                    AlertRepository(db).resolve_all_active()
+                    alert_repo.resolve_all_active()
                 except Exception as exc:
                     logger.debug("Alert auto-resolution failed: %s", exc)
+            elif dec_snapshot.status in (
+                OverallStatus.INTERRUPTED,
+                OverallStatus.DEGRADED,
+                OverallStatus.REVIEW,
+            ):
+                # Persist a system alert for impaired states so the live
+                # monitor's alerts rail actually surfaces them. Dedup by
+                # category so we don't flood one per snapshot/packet.
+                try:
+                    category = (
+                        "COMMUNICATION"
+                        if dec_snapshot.status != OverallStatus.REVIEW
+                        else "SYSTEM"
+                    )
+                    severity = (
+                        "CRITICAL"
+                        if dec_snapshot.status == OverallStatus.INTERRUPTED
+                        else "WARNING"
+                    )
+                    already_active = any(
+                        a.source == "DecisionEngine"
+                        and a.category == category
+                        and not a.resolved
+                        for a in alert_repo.get_active(limit=50)
+                    )
+                    if not already_active:
+                        alert = Alert(
+                            timestamp=utc_now(),
+                            severity=severity,
+                            category=category,
+                            message=(
+                                f"Decision Engine [{dec_snapshot.status.value}]: "
+                                f"{(dec_snapshot.primary_reason or '')[:200]}"
+                            ),
+                            source="DecisionEngine",
+                            resolved=False,
+                            extra_data={
+                                "consistency": dec_snapshot.consistency.value
+                                if hasattr(dec_snapshot.consistency, "value")
+                                else str(dec_snapshot.consistency),
+                                "decision_confidence": dec_snapshot.confidence,
+                            },
+                        )
+                        alert_repo.create(alert)
+                except Exception as exc:
+                    logger.debug("Alert creation failed: %s", exc)
 
         active_alerts: List[Dict[str, Any]] = []
         if db is not None:
