@@ -102,6 +102,11 @@ class SessionMonitor:
         # Event log
         self.events: List[Dict[str, Any]] = []
 
+        # Loss baseline: after recovery, packet loss is measured from this
+        # sequence number forward rather than from session start, so that
+        # pre-recovery losses don't keep the link in DEGRADED indefinitely.
+        self._loss_baseline_seq: Optional[int] = None
+
         # Thresholds from settings
         self.warning_latency_ms: float = settings.COMMUNICATION_LATENCY_WARNING_MS
         self.warning_loss_percent: float = settings.COMMUNICATION_PACKET_LOSS_WARNING_PERCENT
@@ -164,6 +169,9 @@ class SessionMonitor:
             )
             if recovery_record:
                 is_recovering = True
+                # Shift the loss baseline to the first resumed packet so that
+                # pre-recovery losses no longer pollute the live loss_pct / health.
+                self._loss_baseline_seq = recovery_record.first_resumed_sequence
                 evt = {
                     "event_type": CommunicationEventType.RECOVERY.value,
                     "timestamp": utc_now(),
@@ -220,9 +228,10 @@ class SessionMonitor:
                     self.session_id,
                 )
 
-        # Recompute health and status
-        expected = self._current_expected_packets()
-        lost, loss_pct = calculate_packet_loss(expected, len(self.received_sequences))
+        # Recompute health and status (use post-recovery baseline for live loss)
+        expected = self._current_expected_packets(for_live=True)
+        received = self._count_received_packets(for_live=True)
+        lost, loss_pct = calculate_packet_loss(expected, received)
         latency_stats = calculate_latency_statistics(self.latencies_ms)
         jitter = calculate_jitter(self.latencies_ms)
 
@@ -279,8 +288,8 @@ class SessionMonitor:
             prev_status = self.status
             self.status = CommunicationStatus.INTERRUPTED
 
-            expected = self._current_expected_packets()
-            _, loss_pct = calculate_packet_loss(expected, len(self.received_sequences))
+            expected = self._current_expected_packets(for_live=True)
+            _, loss_pct = calculate_packet_loss(expected, self._count_received_packets(for_live=True))
             lat_stats = calculate_latency_statistics(self.latencies_ms)
             jitter = calculate_jitter(self.latencies_ms)
             self.health_score = calculate_health_score(
@@ -305,10 +314,27 @@ class SessionMonitor:
             return evt
         return None
 
-    def _current_expected_packets(self) -> int:
-        """Calculate currently expected packets based on sequence numbers or configured count."""
-        if self.min_sequence is not None and self.max_sequence is not None:
-            seq_expected = self.max_sequence - self.min_sequence + 1
+    def _current_expected_packets(self, for_live: bool = True) -> int:
+        """Calculate currently expected packets based on sequence numbers or configured count.
+
+        When *for_live* is True and a recovery baseline has been established, the
+        expected count is measured from that baseline forward — this is what feeds
+        real-time status / health evaluation so pre-recovery losses don't pin the
+        link in DEGRADED forever.  When *for_live* is False the session-wide total
+        is computed (used by close_session for the persistent summary).
+        """
+        baseline = self.min_sequence
+        using_recovery_baseline = False
+        if for_live and self._loss_baseline_seq is not None:
+            baseline = self._loss_baseline_seq
+            using_recovery_baseline = True
+        if baseline is not None and self.max_sequence is not None:
+            seq_expected = self.max_sequence - baseline + 1
+            # In live mode with a recovery baseline, the user-configured
+            # expected_packets covers the *entire* session, so it must not
+            # inflate the post-recovery expected count.
+            if using_recovery_baseline:
+                return seq_expected
             if self.expected_packets is not None:
                 return max(seq_expected, self.expected_packets)
             return seq_expected
@@ -316,10 +342,16 @@ class SessionMonitor:
             return self.expected_packets
         return len(self.received_sequences)
 
+    def _count_received_packets(self, for_live: bool = True) -> int:
+        """Count received packets, optionally restricted to the post-recovery window."""
+        if for_live and self._loss_baseline_seq is not None:
+            return sum(1 for s in self.received_sequences if s >= self._loss_baseline_seq)
+        return len(self.received_sequences)
+
     def get_metrics(self) -> CommunicationMetricsResponse:
         """Compute and return current real-time communication metrics."""
-        expected = self._current_expected_packets()
-        received_count = len(self.received_sequences)
+        expected = self._current_expected_packets(for_live=True)
+        received_count = self._count_received_packets(for_live=True)
         lost_count, loss_pct = calculate_packet_loss(expected, received_count)
 
         lat_stats = calculate_latency_statistics(self.latencies_ms)
@@ -377,8 +409,8 @@ class SessionMonitor:
             self.interruption_detector.interruption_history.append(inter)
             self.interruption_detector.is_interrupted = False
 
-        expected = self._current_expected_packets()
-        received_count = len(self.received_sequences)
+        expected = self._current_expected_packets(for_live=False)
+        received_count = self._count_received_packets(for_live=False)
         lost_count, loss_pct = calculate_packet_loss(expected, received_count)
 
         lat_stats = calculate_latency_statistics(self.latencies_ms)

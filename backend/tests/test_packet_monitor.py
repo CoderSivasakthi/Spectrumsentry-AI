@@ -206,6 +206,62 @@ class TestSessionMonitor:
         )
         assert monitor.status == CommunicationStatus.CONNECTED
 
+    def test_loss_baseline_resets_after_recovery(self):
+        """After recovery confirmation, live loss_pct should drop so the link can
+        return to CONNECTED — pre-recovery losses must not pin status in DEGRADED."""
+        monitor = SessionMonitor(session_id="flap_sess", timeout_seconds=1.0)
+        t0 = 1000.0
+
+        # 1. Normal packets 1-30
+        for seq in range(1, 31):
+            monitor.record_packet(
+                PacketIn(session_id="flap_sess", sequence_number=seq,
+                         sender_timestamp=t0, payload_size=1000, client_rtt_ms=15.0),
+                t0 + seq * 0.1,
+            )
+        assert monitor.status == CommunicationStatus.CONNECTED
+        assert monitor.get_metrics().packet_loss_percent == 0.0
+
+        # 2. WiFi flap: send first resumption packet (seq 49) well past timeout
+        monitor.record_packet(
+            PacketIn(session_id="flap_sess", sequence_number=49,
+                     sender_timestamp=t0, payload_size=1000, client_rtt_ms=15.0),
+            t0 + 49 * 0.1 + 10,
+        )
+        monitor.check_timeout_tick(t0 + 49 * 0.1 + 13)
+        assert monitor.status == CommunicationStatus.INTERRUPTED
+
+        # 3. Recovery confirmation: packets 50, 51 (3 consecutive: 49, 50, 51)
+        monitor.record_packet(
+            PacketIn(session_id="flap_sess", sequence_number=50,
+                     sender_timestamp=t0, payload_size=1000, client_rtt_ms=15.0),
+            t0 + 50 * 0.1 + 10,
+        )
+        monitor.record_packet(
+            PacketIn(session_id="flap_sess", sequence_number=51,
+                     sender_timestamp=t0, payload_size=1000, client_rtt_ms=15.0),
+            t0 + 51 * 0.1 + 10,
+        )
+        assert monitor.status == CommunicationStatus.RECOVERING
+        # Live loss_pct should be near-zero after baseline reset (not 30% cumulative)
+        assert monitor.get_metrics().packet_loss_percent < 5.0
+
+        # 4. A few more clean packets to stabilize
+        for seq in range(52, 56):
+            monitor.record_packet(
+                PacketIn(session_id="flap_sess", sequence_number=seq,
+                         sender_timestamp=t0, payload_size=1000, client_rtt_ms=15.0),
+                t0 + seq * 0.1 + 10,
+            )
+        m = monitor.get_metrics()
+        assert m.status == CommunicationStatus.CONNECTED
+        assert m.packet_loss_percent < 5.0
+
+        # 5. Session summary must still report TOTAL loss (historical accounting)
+        summary = monitor.close_session()
+        assert summary.packets_lost >= 18
+        assert summary.packet_loss_percent >= 25.0  # 18/60 ≈ 30%
+
 
 
 class TestPacketMonitorManager:
