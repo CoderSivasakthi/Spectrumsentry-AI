@@ -89,6 +89,9 @@ class Settings(BaseSettings):
         "http://127.0.0.1:4173",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        # LAN IPs for cross-device testing (e.g. phone on same WiFi)
+        "http://192.168.1.36:5173",
+        "http://100.97.104.2:5173",
     ]
 
     @field_validator("CORS_ORIGINS", mode="before")
