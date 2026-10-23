@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SpectrumSentry AI - Packet Sender</title>
+<style>
+  /* Self-contained phone-friendly sender page (corrected report fix #1, port of B.4).
+     Open this page on the phone browser during a hotspot test; it POSTs numbered test
+     packets to the monitor, measures round-trip latency on the SENDER clock, and can
+     simulate pauses to exercise interruption + recovery detection end to end. */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px; font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: #0d1117; color: #e6edf3; font-size: 16px;
+  }
+  h1 { font-size: 1.15rem; margin: 0 0 4px; }
+  .sub { color: #8b949e; font-size: 0.8rem; margin-bottom: 16px; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  label { display: block; font-size: 0.72rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  input {
+    width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #30363d;
+    background: #0d1117; color: #e6edf3; font-size: 1rem;
+  }
+  button {
+    width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 1rem;
+    font-weight: 600; background: #238636; color: #fff; cursor: pointer; margin-top: 8px;
+  }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  button.warn { background: #9e6a03; }
+  button.danger { background: #b62324; }
+  button.ghost { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
+  .row { display: flex; gap: 8px; }
+  .row button { margin-top: 0; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 8px; text-align: center; }
+  .stat .v { font-size: 1.2rem; font-weight: 700; }
+  .stat .k { font-size: 0.68rem; color: #8b949e; text-transform: uppercase; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 0.85rem; font-weight: 700; }
+  .CONNECTED, .SENDING { background: #238636; }
+  .INTERRUPTED { background: #b62324; }
+  .RECOVERING { background: #9e6a03; }
+  .DEGRADED { background: #9e6a03; }
+  .STOPPED, .idle { background: #30363d; }
+  pre {
+    background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 10px;
+    font-size: 0.75rem; max-height: 240px; overflow: auto; white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+<h1>SpectrumSentry AI Packet Sender</h1>
+<div class="sub">Phone-browser test client (Stream A). Serves the corrected-report test cases TC-01 to TC-04.</div>
+
+<div class="card">
+  <div class="sub">Session ID</div>
+  <div><span class="badge idle" id="sessBadge">disconnected</span></div>
+  <div class="grid" style="margin-top:10px">
+    <div><label>Packet interval (ms)</label><input id="intervalMs" type="number" value="250" min="25"></div>
+    <div><label>Payload size (bytes)</label><input id="payloadSize" type="number" value="1024" min="1" max="65536"></div>
+    <div><label>Simulated pause (s)</label><input id="pauseSec" type="number" value="3" min="1" max="60"></div>
+    <div><label>Sent / received</label><input id="counts" value="0 / 0" readonly></div>
+  </div>
+  <button id="startBtn" class="ghost">1. Start session</button>
+  <button id="sendBtn" disabled>2. Start sending</button>
+  <div class="row">
+    <button id="pauseBtn" class="warn" disabled>Simulate pause</button>
+    <button id="stopBtn" class="danger" disabled>Stop</button>
+  </div>
+</div>
+
+<div class="card stats">
+  <div class="stat"><div class="v" id="seq">0</div><div class="k">Sequence</div></div>
+  <div class="stat"><div class="v" id="rtt">-</div><div class="k">Last RTT ms</div></div>
+  <div class="stat"><div class="v" id="avgRtt">-</div><div class="k">Avg RTT ms</div></div>
+</div>
+
+<div class="card">
+  <pre id="log">Log ready.
+Open this page ON THE PHONE hotspot browser: http://&lt;server-host&gt;:8000/sender</pre>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var state = { sessionId: null, sending: false, seq: 0, prevRtt: null,
+                rtts: [], failed: 0, pauseUntil: 0, timer: null, poller: null };
+  var logEl = $("log");
+  function log(line) {
+    var t = new Date().toISOString().slice(11, 19);
+    logEl.textContent = t + "  " + line + "\n" + logEl.textContent;
+  }
+  function badge(text) {
+    var el = $("sessBadge");
+    el.textContent = text.toLowerCase();
+    el.className = "badge " + text.toLowerCase();
+  }
+
+  function payloadString(size) {
+    var pattern = "SpectrumSentry-Telemetry-";
+    var repeats = Math.ceil(size / pattern.length);
+    var full = pattern.repeat(repeats);
+    // payload_size counts bytes; server uses payload_size, body content is free-form
+    return full.slice(0, Math.max(1, size));
+  }
+
+  async function startSession() {
+    $("startBtn").disabled = true;
+    try {
+      var res = await fetch("/api/communication/session/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ timeout_seconds: 2.0, extra_metadata: { client: "phone_sender" } })
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      var data = await res.json();
+      state.sessionId = data.session_id;
+      state.seq = 0; state.prevRtt = null; state.rtts = []; state.failed = 0;
+      badge("CONNECTED");
+      $("counts").value = "0 / 0";
+      $("sendBtn").disabled = false; $("stopBtn").disabled = false;
+      $("pauseBtn").disabled = false;
+      log("Session started: " + state.sessionId);
+      startPoller();
+      $("sendBtn").click();
+    } catch (err) {
+      log("Start failed: " + err.message + " (is the phone on the same hotspot?)");
+      $("startBtn").disabled = false;
+    }
+  }
+
+  async function sendOne() {
+    if (!state.sending || !state.sessionId) return;
+    var intervalMs = Math.max(25, parseInt($("intervalMs").value, 10) || 250);
+    var whenPauseEnds = state.pauseUntil;
+    if (Date.now() < whenPauseEnds) {
+      $("sendBtn").textContent = "Paused (" + Math.ceil((whenPauseEnds - Date.now()) / 1000) + "s)";
+      state.timer = setTimeout(sendOne, 200);
+      return;
+    }
+    if ($("sendBtn").textContent.indexOf("Paused") === 0) { $("sendBtn").textContent = "Pause sending"; }
+
+    var seq = ++state.seq;
+    var payloadSize = Math.max(1, parseInt($("payloadSize").value, 10) || 1024);
+    var body = {
+      session_id: state.sessionId,
+      sequence_number: seq,
+      sender_timestamp: Date.now() / 1000.0,
+      payload_size: payloadSize,
+      payload: payloadString(payloadSize),
+      protocol_version: "1.0",
+      client_rtt_ms: state.prevRtt
+    };
+    var t0 = performance.now();
+    try {
+      var res = await fetch("/api/communication/packet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      var rttMs = performance.now() - t0;
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      var ack = await res.json();
+      state.prevRtt = rttMs;
+      state.rtts.push(rttMs);
+      statUpdate(rttMs);
+      $("seq").textContent = seq;
+      badge(ack.status || "CONNECTED");
+    } catch (err) {
+      state.failed++;
+      log("Packet " + seq + " FAILED: " + err.message);
+      if (state.failed >= 3 && !state.sending === false) { /* keep trying; server tracks the interruption */ }
+    }
+    state.timer = setTimeout(sendOne, intervalMs);
+  }
+
+  function statUpdate(rtt) {
+    $("rtt").textContent = rtt.toFixed(1);
+    var avg = state.rtts.reduce(function (a, b) { return a + b; }, 0) / state.rtts.length;
+    $("avgRtt").textContent = avg.toFixed(1);
+    $("counts").value = state.seq + " / " + (state.seq - state.failed);
+  }
+
+  function startPoller() {
+    if (state.poller) clearInterval(state.poller);
+    state.poller = setInterval(async function () {
+      if (!state.sessionId) return;
+      try {
+        var res = await fetch("/api/communication/metrics?session_id=" + state.sessionId);
+        var m = await res.json();
+        badge(m.status || "CONNECTED");
+      } catch (err) { /* phone offline - badge stays */ }
+    }, 1000);
+  }
+
+  $("startBtn").addEventListener("click", startSession);
+  $("sendBtn").addEventListener("click", function () {
+    if (state.sending) return;
+    state.sending = true;
+    $("sendBtn").textContent = "Pause sending";
+    sendOne();
+  });
+  $("pauseBtn").addEventListener("click", function () {
+    var sec = Math.max(1, parseInt($("pauseSec").value, 10) || 3);
+    state.pauseUntil = Date.now() + sec * 1000;
+    log("Simulated radio pause for " + sec + " s (server timeout will fire, then 3-packet recovery applies)");
+  });
+  $("stopBtn").addEventListener("click", async function () {
+    state.sending = false;
+    clearTimeout(state.timer);
+    try {
+      var res = await fetch("/api/communication/session/stop", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: state.sessionId, reason: "sender_stop" })
+      });
+      var summary = await res.json();
+      log("STOPPED | packets_received=" + summary.packets_received +
+          " loss=" + (summary.packet_loss_percent || 0).toFixed(1) + "%" +
+          " interruptions=" + summary.interruption_count +
+          " recoveries=" + summary.recovery_count +
+          " avgRtt=" + ((summary.avg_latency_ms || 0).toFixed(1)) + " ms" +
+          " health=" + (summary.health_score || 0).toFixed(0));
+      log("Full summary printed to server console / dashboard history.");
+    } catch (err) {
+      log("Stop failed: " + err.message);
+    }
+    badge("STOPPED");
+    if (state.poller) clearInterval(state.poller);
+    $("sendBtn").textContent = "2. Start sending";
+    $("sendBtn").disabled = true; $("pauseBtn").disabled = true; $("stopBtn").disabled = true;
+    $("startBtn").disabled = false;
+  });
+})();
+</script>
+</body>
+</html>

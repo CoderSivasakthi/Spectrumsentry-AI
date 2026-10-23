@@ -94,6 +94,19 @@ class AlertRepository:
         self.db.refresh(alert)
         return alert
 
+    def resolve_all_active(self) -> int:
+        """Mark every unresolved alert as resolved.
+
+        Called when the decision engine returns to a sustained healthy baseline,
+        so the active-alert list reflects currently applicable conditions instead
+        of accumulating stale entries indefinitely.
+        """
+        rows = self.db.query(Alert).filter(Alert.resolved == False).all()
+        for alert in rows:
+            alert.resolved = True
+        self.db.commit()
+        return len(rows)
+
 
 class CommunicationSessionRepository:
     """Repository handling database operations for communication sessions."""

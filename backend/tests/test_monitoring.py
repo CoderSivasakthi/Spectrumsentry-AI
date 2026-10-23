@@ -312,7 +312,7 @@ class TestDecisionStatesThroughUnifiedPipeline:
         assert snapshot.communication.is_interrupted is True
 
     def test_recovering_decision(self, db):
-        """Test 13: RECOVERING decision on first packet after silence."""
+        """Test 13: RECOVERING decision after 3 consecutive packets post-silence."""
         comm_req = SessionStartRequest(session_id="sess_rec", timeout_seconds=1.0)
         packet_monitor.start_session(comm_req, db)
         unified_monitor.active_communication_session_id = "sess_rec"
@@ -324,8 +324,19 @@ class TestDecisionStatesThroughUnifiedPipeline:
         monitor.check_timeout_tick(t + 2.0)
         assert monitor.status == CommunicationStatus.INTERRUPTED
 
-        # Now transmit packet 2
-        monitor.record_packet(PacketIn(session_id="sess_rec", sequence_number=2, sender_timestamp=t + 2.1), t + 2.1)
+        # Resume transmission: RECOVERING is declared after 3 consecutive packets
+        # (corrected report fix #10)
+        for seq, dt in ((2, 2.1), (3, 2.35)):
+            monitor.record_packet(
+                PacketIn(session_id="sess_rec", sequence_number=seq, sender_timestamp=t + dt),
+                t + dt,
+            )
+            assert monitor.status == CommunicationStatus.INTERRUPTED
+
+        monitor.record_packet(
+            PacketIn(session_id="sess_rec", sequence_number=4, sender_timestamp=t + 2.6),
+            t + 2.6,
+        )
         assert monitor.status == CommunicationStatus.RECOVERING
 
         snapshot = unified_monitor.get_current_snapshot(db=db)
@@ -598,16 +609,21 @@ class TestEndToEndIntegration:
         assert snap_interrupted["communication"]["is_interrupted"] is True
 
         # 4. COMMUNICATION RESUMES -> RECOVERING
-        # Transmit packet 16
-        rec_pkt = {
-            "session_id": sess_id,
-            "sequence_number": 16,
-            "sender_timestamp": t0 + 4.1,
-            "payload_size": 256,
-            "protocol_version": "1.0",
-            "client_rtt_ms": 20.0,
-        }
-        client.post("/api/communication/packet", json=rec_pkt)
+        # Transmit 3 consecutive resumption packets (fix #10 confirmation rule).
+        # Packet 16 bridges the sequence gap (lands mid-INTERRUPTED); 17 and 18 are
+        # the consecutive trio that confirms recovery (17+18 = first two, ...).
+        for seq, dt, rtt in ((16, 4.1, 20.0), (17, 4.35, 20.0), (18, 4.6, 20.0)):
+            client.post(
+                "/api/communication/packet",
+                json={
+                    "session_id": sess_id,
+                    "sequence_number": seq,
+                    "sender_timestamp": t0 + dt,
+                    "payload_size": 256,
+                    "protocol_version": "1.0",
+                    "client_rtt_ms": rtt,
+                },
+            )
 
         snap_recovering = client.get("/api/monitoring/status").json()
         assert snap_recovering["decision"]["status"] == "RECOVERING"

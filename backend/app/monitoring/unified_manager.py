@@ -10,6 +10,7 @@ Orchestrates cross-domain integration connecting:
 import asyncio
 from datetime import datetime, timezone
 import logging
+import random
 import time
 from typing import Any, Dict, List, Optional, Tuple
 import uuid
@@ -18,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.communication.packet_monitor import SessionMonitor, packet_monitor
 from backend.app.config.settings import get_settings
+from backend.app.database.database import SessionLocal
 from backend.app.database.models import (
     Alert,
     CommunicationSession,
@@ -75,6 +77,10 @@ class UnifiedMonitoringManager:
         # Cached last snapshot
         self.latest_snapshot: Optional[UnifiedMonitoringSnapshot] = None
 
+        # Continuous signal pipeline (background task while a session is active)
+        self._signal_task: Optional[asyncio.Task] = None
+        self._signal_config: Optional[Dict[str, Any]] = None
+
         # Register callback with Phase 5 PacketMonitor
         packet_monitor.register_listener(self.on_packet_ingested)
 
@@ -99,6 +105,9 @@ class UnifiedMonitoringManager:
 
         self.active_monitoring_session_id = monitoring_session_id
         self.active_communication_session_id = comm_session_id
+
+        # Keep physical-layer evidence flowing while the session is live
+        self._start_signal_pipeline()
 
         # Persist session to SQLite
         session_repo = MonitoringSessionRepository(db)
@@ -186,9 +195,114 @@ class UnifiedMonitoringManager:
             self.active_monitoring_session_id = None
             self.active_communication_session_id = None
 
+        # No live session: stop producing signal evidence and reset to an
+        # honest inactive-feed state rather than leaving stale numbers visible.
+        self._stop_signal_pipeline()
+        self.clear_signal_evidence()
+
+        # Session is closing: no conditions remain observable, clear open alerts
+        try:
+            AlertRepository(db).resolve_all_active()
+        except Exception as exc:
+            logger.debug("Alert auto-resolution on session stop failed: %s", exc)
+
         logger.info("Unified monitoring session stopped: %s", target_id)
 
         return MonitoringSessionSummary.model_validate(db_sess)
+
+    # ------------------------------------------------------------------
+    # Continuous signal pipeline (synthetic channel + real AI classifier)
+    # Signal evidence otherwise only refreshes on external ingest or a
+    # one-shot /signal/simulate call; without a producer the live monitor's
+    # physical-layer card would blank out ~30 s after each manual run.
+    # ------------------------------------------------------------------
+
+    _SUPPORTED_MODULATIONS = ("BPSK", "QPSK", "16-QAM")
+
+    def _start_signal_pipeline(self) -> None:
+        """Launch the background signal evidence producer for the active session."""
+        self._stop_signal_pipeline()
+        settings = get_settings()
+        if not settings.SIGNAL_EVIDENCE_AUTO_SIMULATE:
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # Sync context (unit tests): the pipeline is a live-server feature only
+            return
+        self._signal_config = {
+            # One scheme per session so the classification stays coherent, on a
+            # channel SNR that drifts realistically cycle to cycle
+            "modulation": random.choice(self._SUPPORTED_MODULATIONS),
+            "base_snr_db": random.uniform(8.0, 18.0),
+        }
+        self._signal_task = loop.create_task(self._signal_pipeline_loop())
+
+    def _stop_signal_pipeline(self) -> None:
+        task = self._signal_task
+        self._signal_task = None
+        self._signal_config = None
+        if task is not None and not task.done():
+            task.cancel()
+
+    async def _signal_pipeline_loop(self) -> None:
+        """Continuously simulate a channel signal, classify it via the real MLP pipeline, and ingest evidence."""
+        from backend.app.signal_processing.features import extract_features
+        from backend.app.signal_processing.generator import run_signal_experiment
+
+        cfg = self._signal_config
+        if cfg is not None:
+            logger.info(
+                "Signal pipeline started: %s @ ~%.1f dB base SNR",
+                cfg["modulation"],
+                cfg["base_snr_db"],
+            )
+        try:
+            while True:
+                cfg = self._signal_config
+                if cfg is None:  # Session ended between cycles
+                    break
+                interval = get_settings().SIGNAL_EVIDENCE_INTERVAL_SECONDS
+                snr_db = max(-5.0, cfg["base_snr_db"] + random.uniform(-2.0, 2.0))
+                try:
+                    experiment = run_signal_experiment(
+                        modulation=cfg["modulation"],
+                        sample_count=1024,
+                        snr_db=snr_db,
+                    )
+                    features_vector, _feature_dict = extract_features(
+                        experiment.noisy_signal, sample_rate=experiment.sample_rate
+                    )
+                    noise_power = (
+                        float(np.mean(np.abs(experiment.noise) ** 2))
+                        if experiment.noise is not None
+                        and np.isfinite(np.mean(np.abs(experiment.noise) ** 2))
+                        else None
+                    )
+                    evidence = SignalEvidenceInput(
+                        features=[float(f) for f in np.asarray(features_vector, dtype=float)],
+                        estimated_snr_db=experiment.measured_snr_db,
+                        signal_power=float(experiment.signal_power),
+                        noise_power=noise_power,
+                        extra_data={
+                            "simulated": True,
+                            "requested_modulation": cfg["modulation"],
+                            "requested_snr_db": snr_db,
+                            "source": "live_pipeline",
+                        },
+                    )
+                    db = SessionLocal()
+                    try:
+                        self.update_signal_evidence(evidence, db=db)
+                    finally:
+                        db.close()
+                except Exception as exc:
+                    logger.warning("Signal pipeline cycle failed: %s", exc)
+                await asyncio.sleep(interval)
+        except asyncio.CancelledError:
+            pass
+        finally:
+            logger.info("Signal pipeline stopped.")
 
     def update_signal_evidence(
         self, signal_in: SignalEvidenceInput, db: Optional[Session] = None
@@ -198,8 +312,27 @@ class UnifiedMonitoringManager:
         if signal_in.features is not None:
             try:
                 from backend.app.ml.predictor import ModulationPredictor
-                predictor = ModulationPredictor()
+                settings = get_settings()
+                model_path = settings.AI_MODEL_PATH
+                if not model_path.exists() and settings.AI_MODEL_FALLBACK_PATH.exists():
+                    model_path = settings.AI_MODEL_FALLBACK_PATH
+                predictor = ModulationPredictor(model_path=model_path)
+                # Match the evidence's feature count to the model contract: fall back
+                # to the legacy v1 model when active evidence is on the 23-feature
+                # contract and the preferred v2 cumulant model is 6-feature (or vice
+                # versa), so live traffic is served by whichever contract fits.
+                if predictor.pipeline is not None and len(signal_in.features) != predictor.expected_feature_count():
+                    fallback = ModulationPredictor(model_path=settings.AI_MODEL_FALLBACK_PATH)
+                    if fallback.pipeline is not None and len(signal_in.features) == fallback.expected_feature_count():
+                        predictor = fallback
                 if predictor.pipeline is not None:
+                    # Resolve the novelty detector matching the active model's
+                    # feature contract (v1 moments vs v2 cumulants, fix #8).
+                    expected = predictor.expected_feature_count()
+                    detector_path = settings.AI_NOVELTY_DETECTOR_PATH
+                    if expected == 6 and settings.AI_NOVELTY_DETECTOR_CUMULANT_PATH.exists():
+                        detector_path = settings.AI_NOVELTY_DETECTOR_CUMULANT_PATH
+                    predictor.novelty_detector_path = detector_path
                     pred_res = predictor.predict_single(
                         np.array(signal_in.features, dtype=np.float32)
                     )
@@ -207,6 +340,10 @@ class UnifiedMonitoringManager:
                         signal_in.predicted_modulation = pred_res.get("predicted_modulation")
                     if signal_in.ai_confidence is None:
                         signal_in.ai_confidence = pred_res.get("confidence")
+                    if signal_in.is_outlier is None:
+                        signal_in.is_outlier = pred_res.get("is_outlier")
+                    if signal_in.novelty_score is None:
+                        signal_in.novelty_score = pred_res.get("novelty_score")
             except Exception as exc:
                 logger.warning("AI inference on provided features failed: %s", exc)
 
@@ -306,6 +443,7 @@ class UnifiedMonitoringManager:
                 interruption_count=metrics.interruption_count,
                 is_interrupted=metrics.is_interrupted,
                 recovery_count=metrics.recovery_count,
+                packets_received=metrics.packets_received,
             )
 
             comm_snapshot = CommunicationSnapshot(
@@ -370,6 +508,12 @@ class UnifiedMonitoringManager:
             signal_quality=(
                 self.latest_signal_evidence.signal_quality if sig_avail else None
             ),
+            is_outlier=(
+                self.latest_signal_evidence.is_outlier if sig_avail else None
+            ),
+            novelty_score=(
+                self.latest_signal_evidence.novelty_score if sig_avail else None
+            ),
         )
 
         # 3. Build Decision Input
@@ -382,6 +526,7 @@ class UnifiedMonitoringManager:
                 signal_power=self.latest_signal_evidence.signal_power,
                 noise_power=self.latest_signal_evidence.noise_power,
                 signal_quality=self.latest_signal_evidence.signal_quality,
+                is_outlier=self.latest_signal_evidence.is_outlier,
             )
         else:
             sig_evidence_for_decision = None
@@ -451,6 +596,20 @@ class UnifiedMonitoringManager:
                 )
 
         # 5. Retrieve Active Alerts
+        # When the engine returns to a fully healthy baseline, resolve stale
+        # alerts so the active list reflects currently applicable conditions
+        # instead of accumulating unresolved entries from past incidents.
+        if db is not None:
+            healthy_baseline = (
+                dec_snapshot.status == OverallStatus.NORMAL
+                and dec_snapshot.severity == "INFO"
+            )
+            if healthy_baseline:
+                try:
+                    AlertRepository(db).resolve_all_active()
+                except Exception as exc:
+                    logger.debug("Alert auto-resolution failed: %s", exc)
+
         active_alerts: List[Dict[str, Any]] = []
         if db is not None:
             try:

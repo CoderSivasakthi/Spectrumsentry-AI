@@ -3,13 +3,13 @@
     "experiment_id": "EXP-DSP-01",
     "experiment_name": "signal_dsp_calibration",
     "description": "Verification of synthetic modulation generation, AWGN SNR calibration, and feature stability.",
-    "random_seed": 42,
-    "timestamp": "2026-10-19T07:10:13.396904+00:00",
+    "random_seed": 99,
+    "timestamp": "2026-10-23T07:34:07.830665+00:00",
     "dataset_version": "v1.0",
     "model_version": "v1.0",
-    "model_path": "/Users/sivas_mac/projects/SpectrumSentry-AI/backend/models/modulation_mlp_v1.joblib",
-    "dataset_dir": "/Users/sivas_mac/projects/SpectrumSentry-AI/backend/data/datasets",
-    "output_dir": "/Users/sivas_mac/projects/SpectrumSentry-AI/reports/phase9",
+    "model_path": "E:\\SpectrumSentry AI\\backend\\models\\modulation_mlp_v1.joblib",
+    "dataset_dir": "E:\\SpectrumSentry AI\\backend\\data\\datasets",
+    "output_dir": "E:\\SpectrumSentry AI\\reports\\phase9",
     "parameters": {
       "snr_sweep_levels": [
         -5.0,
@@ -27,17 +27,17 @@
       ]
     },
     "environment": {
-      "os_name": "Darwin",
-      "os_release": "25.6.0",
-      "os_version": "Darwin Kernel Version 25.6.0: Fri Jul 31 19:16:20 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T8142",
-      "machine_architecture": "arm64",
-      "processor": "arm",
-      "python_version": "3.12.15",
+      "os_name": "Windows",
+      "os_release": "11",
+      "os_version": "10.0.26300",
+      "machine_architecture": "AMD64",
+      "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+      "python_version": "3.13.16",
       "numpy_version": "2.5.4",
       "scipy_version": "1.18.1",
       "sklearn_version": "1.9.1",
       "matplotlib_version": "3.11.2",
-      "pid": 76178
+      "pid": 20240
     }
   },
   "modulation_generation": {
@@ -58,80 +58,80 @@
     "16-QAM": {
       "num_samples": 1024,
       "is_complex": true,
-      "measured_power": 1.009375,
-      "power_deviation_from_unity": 0.009375,
+      "measured_power": 0.980469,
+      "power_deviation_from_unity": 0.019531,
       "valid": true
     }
   },
   "snr_calibration": {
-    "overall_mean_absolute_snr_error_db": 0.0672,
-    "overall_max_absolute_snr_error_db": 0.2469,
+    "overall_mean_absolute_snr_error_db": 0.0769,
+    "overall_max_absolute_snr_error_db": 0.273,
     "records": [
       {
         "target_snr_db": -5.0,
         "trials": 50,
-        "measured_snr_mean": -5.0061,
-        "measured_snr_std": 0.0931,
-        "mean_error_db": -0.0061,
-        "mean_absolute_error_db": 0.0763,
-        "max_absolute_error_db": 0.2148,
+        "measured_snr_mean": -4.9824,
+        "measured_snr_std": 0.0963,
+        "mean_error_db": 0.0176,
+        "mean_absolute_error_db": 0.0816,
+        "max_absolute_error_db": 0.2675,
         "avg_signal_power": 1.0,
-        "avg_noise_power": 3.167468
+        "avg_noise_power": 3.150256
       },
       {
         "target_snr_db": 0.0,
         "trials": 50,
-        "measured_snr_mean": 0.026,
-        "measured_snr_std": 0.0752,
-        "mean_error_db": 0.026,
-        "mean_absolute_error_db": 0.0649,
-        "max_absolute_error_db": 0.2145,
+        "measured_snr_mean": 0.003,
+        "measured_snr_std": 0.094,
+        "mean_error_db": 0.003,
+        "mean_absolute_error_db": 0.0771,
+        "max_absolute_error_db": 0.1982,
         "avg_signal_power": 1.0,
-        "avg_noise_power": 0.994179
+        "avg_noise_power": 0.999552
       },
       {
         "target_snr_db": 5.0,
         "trials": 50,
-        "measured_snr_mean": 4.9941,
-        "measured_snr_std": 0.0827,
-        "mean_error_db": -0.0059,
-        "mean_absolute_error_db": 0.0688,
-        "max_absolute_error_db": 0.1649,
+        "measured_snr_mean": 4.9881,
+        "measured_snr_std": 0.095,
+        "mean_error_db": -0.0119,
+        "mean_absolute_error_db": 0.0742,
+        "max_absolute_error_db": 0.273,
         "avg_signal_power": 1.0,
-        "avg_noise_power": 0.316717
+        "avg_noise_power": 0.317168
       },
       {
         "target_snr_db": 10.0,
         "trials": 50,
-        "measured_snr_mean": 10.0147,
-        "measured_snr_std": 0.0817,
-        "mean_error_db": 0.0147,
-        "mean_absolute_error_db": 0.0623,
-        "max_absolute_error_db": 0.2469,
+        "measured_snr_mean": 9.991,
+        "measured_snr_std": 0.1027,
+        "mean_error_db": -0.009,
+        "mean_absolute_error_db": 0.0848,
+        "max_absolute_error_db": 0.2554,
         "avg_signal_power": 1.0,
-        "avg_noise_power": 0.09968
+        "avg_noise_power": 0.100236
       },
       {
         "target_snr_db": 15.0,
         "trials": 50,
-        "measured_snr_mean": 15.0023,
-        "measured_snr_std": 0.0747,
-        "mean_error_db": 0.0023,
-        "mean_absolute_error_db": 0.0588,
-        "max_absolute_error_db": 0.191,
+        "measured_snr_mean": 14.9966,
+        "measured_snr_std": 0.0789,
+        "mean_error_db": -0.0034,
+        "mean_absolute_error_db": 0.0654,
+        "max_absolute_error_db": 0.1865,
         "avg_signal_power": 1.0,
-        "avg_noise_power": 0.031611
+        "avg_noise_power": 0.031653
       },
       {
         "target_snr_db": 20.0,
         "trials": 50,
-        "measured_snr_mean": 19.9911,
-        "measured_snr_std": 0.0872,
-        "mean_error_db": -0.0089,
-        "mean_absolute_error_db": 0.0723,
-        "max_absolute_error_db": 0.1906,
+        "measured_snr_mean": 19.9997,
+        "measured_snr_std": 0.1028,
+        "mean_error_db": -0.0003,
+        "mean_absolute_error_db": 0.0785,
+        "max_absolute_error_db": 0.2433,
         "avg_signal_power": 1.0,
-        "avg_noise_power": 0.010023
+        "avg_noise_power": 0.010003
       }
     ]
   },
@@ -139,17 +139,17 @@
     "BPSK": {
       "trials": 50,
       "snr_db": 15.0,
-      "avg_cv": 4.6424
+      "avg_cv": 11.1772
     },
     "QPSK": {
       "trials": 50,
       "snr_db": 15.0,
-      "avg_cv": 15.3795
+      "avg_cv": 16.1865
     },
     "16-QAM": {
       "trials": 50,
       "snr_db": 15.0,
-      "avg_cv": 2.4812
+      "avg_cv": 8.0478
     }
   }
 }

@@ -6,6 +6,12 @@ feature extraction for BPSK, QPSK, and 16-QAM modulations.
 """
 
 from .constellation import ConstellationData, extract_constellation
+from .cumulants import (
+    FEATURE_COUNT_CUMULANT,
+    FEATURE_NAMES_CUMULANT,
+    apply_carrier_phase,
+    extract_cumulant_features,
+)
 from .features import FEATURE_COUNT, FEATURE_NAMES, extract_features
 from .fft import FFTResult, PSDResult, compute_fft, compute_psd
 from .generator import (
@@ -69,6 +75,11 @@ __all__ = [
     "FEATURE_NAMES",
     "FEATURE_COUNT",
     "extract_features",
+    # Cumulant features (v2 contract, phase-robust)
+    "FEATURE_NAMES_CUMULANT",
+    "FEATURE_COUNT_CUMULANT",
+    "extract_cumulant_features",
+    "apply_carrier_phase",
     # Generator & Experiment
     "GeneratedSignal",
     "SignalExperiment",

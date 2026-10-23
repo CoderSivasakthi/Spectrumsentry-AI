@@ -16,6 +16,10 @@ import urllib.request
 import urllib.error
 import uuid
 
+from _bootstrap import force_utf8_stdio
+force_utf8_stdio()
+
+
 
 def generate_dummy_payload(size_bytes: int) -> str:
     """Generate deterministic payload string of specified byte length."""

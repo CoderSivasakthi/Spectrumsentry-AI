@@ -25,6 +25,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from _bootstrap import force_utf8_stdio
+force_utf8_stdio()
+
+
 from backend.app.communication.packet_monitor import packet_monitor
 from backend.app.database.database import SessionLocal, init_db
 from backend.app.monitoring.unified_manager import unified_monitor

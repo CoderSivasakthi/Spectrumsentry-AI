@@ -1,15 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getMonitoringHistory } from '../../api/monitoring';
 import { MonitoringSessionSummary } from '../../types/monitoring';
 import { StatusBadge } from '../common/StatusBadge';
 import { LoadingState, EmptyState } from '../common/States';
 import {
-  History,
-  Layers,
+  RefreshCw,
   ChevronLeft,
   ChevronRight,
   Eye,
-  RefreshCw,
   X,
 } from 'lucide-react';
 
@@ -31,6 +29,7 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(autoFetch && !initialSessions);
   const [error, setError] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<MonitoringSessionSummary | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   const fetchHistory = async (offset = skip) => {
     setIsLoading(true);
@@ -51,6 +50,7 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
     if (autoFetch) {
       fetchHistory(0);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoFetch]);
 
   const totalPages = Math.ceil(total / limit) || 1;
@@ -66,82 +66,88 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
     return `${mins}m ${secs}s`;
   };
 
+  /* Modal: Escape + backdrop click close; focus moves in on open. */
+  useEffect(() => {
+    if (!selectedSession) return;
+    closeButtonRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedSession(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedSession]);
+
+  const em = <>&nbsp;—&nbsp;</>;
+
   return (
-    <div className="space-y-6">
-      {/* Page Title & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="stack">
+      {/* Page head */}
+      <div className="row--between row" style={{ flexWrap: 'wrap' }}>
         <div>
-          <h2 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
-            <History className="w-5 h-5 text-sky-400" />
-            <span>Monitoring Session History</span>
+          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--text-1)' }}>
+            Session history
           </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Historical cross-domain monitoring sessions persisted in SQLite
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-3)', marginTop: 2 }}>
+            Completed monitoring sessions persisted by the backend.
           </p>
         </div>
-
         <button
+          className="btn btn--secondary btn--sm"
           onClick={() => fetchHistory(skip)}
           disabled={isLoading}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-800 bg-slate-900 hover:bg-slate-800 text-xs text-slate-300 font-mono transition-colors self-start sm:self-auto"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-          <span>Refresh List</span>
+          <RefreshCw size={13} style={isLoading ? { animation: 'spin 0.8s linear infinite' } : undefined} />
+          <span>Refresh</span>
         </button>
       </div>
 
-      {/* Main Table Card */}
-      <div className="glass-panel rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
-        {isLoading ? (
+      <section className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        {isLoading && sessions.length === 0 ? (
           <LoadingState message="Loading historical sessions..." subtext="Querying database records" />
         ) : error ? (
-          <div className="p-8 text-center text-rose-400 text-sm">{error}</div>
+          <div className="pane-state" style={{ color: 'var(--crit-fg)', fontSize: 'var(--text-sm)' }}>{error}</div>
         ) : sessions.length === 0 ? (
           <EmptyState
             title="No Monitoring Sessions Found"
             message="Start and stop a monitoring session from the dashboard to create historical records."
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-slate-900/80 border-b border-slate-800 text-[10px] text-slate-400 uppercase tracking-wider">
+          <div style={{ overflowX: 'auto' }}>
+            <table className="table">
+              <thead>
                 <tr>
-                  <th className="py-3 px-4">Session ID</th>
-                  <th className="py-3 px-4">Linked Channel</th>
-                  <th className="py-3 px-4">Started (UTC)</th>
-                  <th className="py-3 px-4">Ended (UTC)</th>
-                  <th className="py-3 px-4">Duration</th>
-                  <th className="py-3 px-4">Final Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th>Session ID</th>
+                  <th>Linked channel</th>
+                  <th>Started (UTC)</th>
+                  <th>Ended (UTC)</th>
+                  <th>Duration</th>
+                  <th>Final status</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-slate-300">
+              <tbody>
                 {sessions.map((sess) => (
-                  <tr key={sess.monitoring_session_id} className="hover:bg-slate-900/40 transition-colors">
-                    <td className="py-3 px-4 font-bold text-sky-400">
+                  <tr key={sess.monitoring_session_id}>
+                    <td className="cell-main num" style={{ color: 'var(--accent)' }}>
                       {sess.monitoring_session_id}
                     </td>
-                    <td className="py-3 px-4 text-slate-400">
-                      {sess.communication_session_id || '—'}
+                    <td>{sess.communication_session_id || em}</td>
+                    <td>
+                      {sess.started_at ? new Date(sess.started_at).toLocaleString() : em}
                     </td>
-                    <td className="py-3 px-4 text-slate-400">
-                      {sess.started_at ? new Date(sess.started_at).toLocaleString() : '—'}
+                    <td>
+                      {sess.ended_at ? new Date(sess.ended_at).toLocaleString() : 'In progress'}
                     </td>
-                    <td className="py-3 px-4 text-slate-400">
-                      {sess.ended_at ? new Date(sess.ended_at).toLocaleString() : 'In Progress'}
-                    </td>
-                    <td className="py-3 px-4 text-slate-300">
-                      {calculateDuration(sess.started_at, sess.ended_at)}
-                    </td>
-                    <td className="py-3 px-4">
+                    <td className="num">{calculateDuration(sess.started_at, sess.ended_at)}</td>
+                    <td>
                       <StatusBadge status={sess.status} size="sm" />
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td style={{ textAlign: 'right' }}>
                       <button
                         onClick={() => setSelectedSession(sess)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-sans font-medium transition-colors"
+                        className="btn btn--ghost btn--sm"
                       >
-                        <Eye className="w-3 h-3 text-sky-400" />
+                        <Eye size={13} />
                         <span>Inspect</span>
                       </button>
                     </td>
@@ -152,110 +158,131 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
           </div>
         )}
 
-        {/* Pagination Footer */}
+        {/* Pagination */}
         {total > 0 && (
-          <div className="p-4 border-t border-slate-800/80 bg-slate-950/60 flex items-center justify-between text-xs font-mono text-slate-400">
-            <div>
-              Showing <span className="text-white font-bold">{skip + 1}</span> to{' '}
-              <span className="text-white font-bold">{Math.min(skip + limit, total)}</span> of{' '}
-              <span className="text-white font-bold">{total}</span> sessions
+          <div
+            className="row--between row"
+            style={{
+              padding: '10px 16px',
+              borderTop: '1px solid var(--border-faint)',
+              fontSize: 'var(--text-sm)',
+              color: 'var(--text-3)',
+            }}
+          >
+            <div className="num">
+              Showing {skip + 1}–{Math.min(skip + limit, total)} of {total} sessions
             </div>
-
-            <div className="flex items-center gap-2">
+            <div className="row" style={{ gap: 'var(--space-2)' }}>
               <button
+                className="btn btn--ghost"
+                aria-label="Previous page"
                 onClick={() => fetchHistory(Math.max(0, skip - limit))}
                 disabled={skip === 0 || isLoading}
-                className="p-1.5 rounded-lg border border-slate-800 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft size={15} />
               </button>
-
-              <span className="text-xs">
+              <span className="num" style={{ fontSize: 'var(--text-xs)' }}>
                 Page {currentPage} of {totalPages}
               </span>
-
               <button
+                className="btn btn--ghost"
+                aria-label="Next page"
                 onClick={() => fetchHistory(skip + limit)}
                 disabled={skip + limit >= total || isLoading}
-                className="p-1.5 rounded-lg border border-slate-800 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight size={15} />
               </button>
             </div>
           </div>
         )}
-      </div>
+      </section>
 
-      {/* Selected Session Drilldown Modal */}
+      {/* Inspect modal */}
       {selectedSession && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-panel w-full max-w-xl rounded-2xl border border-slate-700 p-6 shadow-2xl relative space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <Layers className="w-5 h-5 text-sky-400" />
-                <h3 className="text-base font-bold text-white">
-                  Session Inspection: {selectedSession.monitoring_session_id}
-                </h3>
-              </div>
+        <div className="modal-backdrop" onClick={() => setSelectedSession(null)}>
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Session ${selectedSession.monitoring_session_id}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="row--between row"
+              style={{ paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--border-faint)' }}
+            >
+              <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-1)' }}>
+                Session {selectedSession.monitoring_session_id}
+              </h3>
               <button
+                ref={closeButtonRef}
+                className="btn btn--ghost"
                 onClick={() => setSelectedSession(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                aria-label="Close"
               >
-                <X className="w-5 h-5" />
+                <X size={16} />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs font-mono">
-              <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+            <div className="card--inset" style={{ marginTop: 'var(--space-4)' }}>
+              <div className="telemetry-grid" style={{ gap: 'var(--space-4)' }}>
                 <div>
-                  <span className="text-slate-500 uppercase text-[10px] block">Status</span>
-                  <StatusBadge status={selectedSession.status} size="sm" className="mt-1" />
+                  <span className="field__label">Status</span>
+                  <StatusBadge status={selectedSession.status} size="sm" />
                 </div>
                 <div>
-                  <span className="text-slate-500 uppercase text-[10px] block">Duration</span>
-                  <span className="text-white font-bold mt-1 block">
+                  <span className="field__label">Duration</span>
+                  <span className="num" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-1)' }}>
                     {calculateDuration(selectedSession.started_at, selectedSession.ended_at)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 uppercase text-[10px] block">Started At</span>
-                  <span className="text-slate-300 mt-0.5 block">
+                  <span className="field__label">Started at</span>
+                  <span className="num" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-2)' }}>
                     {selectedSession.started_at ? new Date(selectedSession.started_at).toUTCString() : '—'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 uppercase text-[10px] block">Ended At</span>
-                  <span className="text-slate-300 mt-0.5 block">
+                  <span className="field__label">Ended at</span>
+                  <span className="num" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-2)' }}>
                     {selectedSession.ended_at ? new Date(selectedSession.ended_at).toUTCString() : 'Active'}
                   </span>
                 </div>
               </div>
-
-              {selectedSession.communication_session_id && (
-                <div className="p-3 rounded-xl bg-slate-900/40 border border-slate-800">
-                  <span className="text-slate-500 uppercase text-[10px] block">Linked Communication Session</span>
-                  <span className="text-sky-300 font-bold mt-0.5 block">
-                    {selectedSession.communication_session_id}
-                  </span>
-                </div>
-              )}
-
-              {selectedSession.extra_metadata && (
-                <div className="p-3 rounded-xl bg-slate-900/40 border border-slate-800">
-                  <span className="text-slate-500 uppercase text-[10px] block mb-1">Session Metadata</span>
-                  <pre className="text-[11px] text-slate-400 overflow-x-auto bg-slate-950 p-2 rounded border border-slate-850">
-                    {JSON.stringify(selectedSession.extra_metadata, null, 2)}
-                  </pre>
-                </div>
-              )}
             </div>
 
-            <div className="pt-3 border-t border-slate-800 text-right">
-              <button
-                onClick={() => setSelectedSession(null)}
-                className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white uppercase tracking-wider transition-colors"
-              >
-                Close Inspection
+            {selectedSession.communication_session_id && (
+              <div className="card--inset" style={{ marginTop: 'var(--space-3)' }}>
+                <span className="field__label">Linked communication session</span>
+                <span className="num" style={{ fontSize: 'var(--text-sm)', color: 'var(--accent)' }}>
+                  {selectedSession.communication_session_id}
+                </span>
+              </div>
+            )}
+
+            {selectedSession.extra_metadata && (
+              <div className="card--inset" style={{ marginTop: 'var(--space-3)' }}>
+                <span className="field__label">Session metadata</span>
+                <pre
+                  className="num"
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    color: 'var(--text-3)',
+                    overflowX: 'auto',
+                    background: 'var(--surface-1)',
+                    border: '1px solid var(--border-faint)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: 'var(--space-2)',
+                  }}
+                >
+                  {JSON.stringify(selectedSession.extra_metadata, null, 2)}
+                </pre>
+              </div>
+            )}
+
+            <div style={{ marginTop: 'var(--space-4)', textAlign: 'right' }}>
+              <button className="btn btn--secondary" onClick={() => setSelectedSession(null)}>
+                <span>Close</span>
               </button>
             </div>
           </div>

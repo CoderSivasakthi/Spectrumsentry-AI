@@ -6,187 +6,187 @@
     "features": [
       {
         "feature_name": "mean_i",
-        "mean": 0.00623,
-        "std": 0.025832,
-        "min": -0.042396,
-        "max": 0.071552,
-        "coefficient_of_variation": 4.1462
+        "mean": -0.000388,
+        "std": 0.038856,
+        "min": -0.091285,
+        "max": 0.090594,
+        "coefficient_of_variation": 100.161
       },
       {
         "feature_name": "mean_q",
-        "mean": -0.000354,
-        "std": 0.003521,
-        "min": -0.009785,
-        "max": 0.008475,
-        "coefficient_of_variation": 9.9562
+        "mean": 0.000343,
+        "std": 0.003622,
+        "min": -0.005561,
+        "max": 0.009606,
+        "coefficient_of_variation": 10.5598
       },
       {
         "feature_name": "std_i",
-        "mean": 1.007822,
-        "std": 0.003138,
-        "min": 1.000168,
-        "max": 1.014443,
+        "mean": 1.007643,
+        "std": 0.003137,
+        "min": 0.998846,
+        "max": 1.014885,
         "coefficient_of_variation": 0.0031
       },
       {
         "feature_name": "std_q",
-        "mean": 0.124985,
-        "std": 0.002711,
-        "min": 0.12019,
-        "max": 0.129932,
-        "coefficient_of_variation": 0.0217
+        "mean": 0.125628,
+        "std": 0.003006,
+        "min": 0.119776,
+        "max": 0.133598,
+        "coefficient_of_variation": 0.0239
       },
       {
         "feature_name": "rms_magnitude",
-        "mean": 1.015899,
-        "std": 0.003253,
-        "min": 1.00781,
-        "max": 1.022537,
-        "coefficient_of_variation": 0.0032
+        "mean": 1.016198,
+        "std": 0.003134,
+        "min": 1.00928,
+        "max": 1.023114,
+        "coefficient_of_variation": 0.0031
       },
       {
         "feature_name": "mean_magnitude",
-        "mean": 1.008206,
-        "std": 0.003328,
-        "min": 1.000103,
-        "max": 1.015592,
-        "coefficient_of_variation": 0.0033
+        "mean": 1.008466,
+        "std": 0.003163,
+        "min": 1.001301,
+        "max": 1.015463,
+        "coefficient_of_variation": 0.0031
       },
       {
         "feature_name": "std_magnitude",
-        "mean": 0.12475,
-        "std": 0.002969,
-        "min": 0.118977,
-        "max": 0.13101,
-        "coefficient_of_variation": 0.0238
+        "mean": 0.125093,
+        "std": 0.002709,
+        "min": 0.119802,
+        "max": 0.131855,
+        "coefficient_of_variation": 0.0217
       },
       {
         "feature_name": "peak_magnitude",
-        "mean": 1.411452,
-        "std": 0.042525,
-        "min": 1.343178,
-        "max": 1.53706,
-        "coefficient_of_variation": 0.0301
+        "mean": 1.408723,
+        "std": 0.035663,
+        "min": 1.33557,
+        "max": 1.480769,
+        "coefficient_of_variation": 0.0253
       },
       {
         "feature_name": "signal_power",
-        "mean": 1.032061,
-        "std": 0.006605,
-        "min": 1.015681,
-        "max": 1.045582,
-        "coefficient_of_variation": 0.0064
+        "mean": 1.032669,
+        "std": 0.006371,
+        "min": 1.018646,
+        "max": 1.046763,
+        "coefficient_of_variation": 0.0062
       },
       {
         "feature_name": "moment4_i",
-        "mean": 1.097743,
-        "std": 0.014071,
-        "min": 1.060833,
-        "max": 1.122827,
-        "coefficient_of_variation": 0.0128
+        "mean": 1.100193,
+        "std": 0.014009,
+        "min": 1.070935,
+        "max": 1.131212,
+        "coefficient_of_variation": 0.0127
       },
       {
         "feature_name": "moment4_q",
-        "mean": 0.000733,
-        "std": 7.3e-05,
-        "min": 0.000617,
-        "max": 0.000902,
-        "coefficient_of_variation": 0.1001
+        "mean": 0.000736,
+        "std": 7.8e-05,
+        "min": 0.000588,
+        "max": 0.000972,
+        "coefficient_of_variation": 0.1062
       },
       {
         "feature_name": "moment4_magnitude",
-        "mean": 0.000732,
-        "std": 8e-05,
-        "min": 0.000597,
-        "max": 0.000988,
-        "coefficient_of_variation": 0.1093
+        "mean": 0.000733,
+        "std": 7.2e-05,
+        "min": 0.000585,
+        "max": 0.000917,
+        "coefficient_of_variation": 0.0977
       },
       {
         "feature_name": "skew_i",
-        "mean": -0.011352,
-        "std": 0.049962,
-        "min": -0.135598,
-        "max": 0.080798,
-        "coefficient_of_variation": 4.401
+        "mean": 0.001148,
+        "std": 0.074233,
+        "min": -0.162805,
+        "max": 0.188924,
+        "coefficient_of_variation": 64.6357
       },
       {
         "feature_name": "skew_q",
-        "mean": -0.005408,
-        "std": 0.078,
-        "min": -0.15128,
-        "max": 0.200032,
-        "coefficient_of_variation": 14.4227
+        "mean": 0.009238,
+        "std": 0.062341,
+        "min": -0.143937,
+        "max": 0.134824,
+        "coefficient_of_variation": 6.7481
       },
       {
         "feature_name": "skew_magnitude",
-        "mean": 0.002826,
-        "std": 0.071539,
-        "min": -0.162584,
-        "max": 0.162258,
-        "coefficient_of_variation": 25.3159
+        "mean": -0.001593,
+        "std": 0.077234,
+        "min": -0.114404,
+        "max": 0.22035,
+        "coefficient_of_variation": 48.4701
       },
       {
         "feature_name": "kurtosis_i",
-        "mean": -1.935999,
-        "std": 0.003963,
-        "min": -1.945121,
-        "max": -1.921697,
-        "coefficient_of_variation": 0.002
+        "mean": -1.93284,
+        "std": 0.008631,
+        "min": -1.942255,
+        "max": -1.900763,
+        "coefficient_of_variation": 0.0045
       },
       {
         "feature_name": "kurtosis_q",
-        "mean": -0.005575,
-        "std": 0.155644,
-        "min": -0.243809,
-        "max": 0.571559,
-        "coefficient_of_variation": 27.9183
+        "mean": -0.054858,
+        "std": 0.132209,
+        "min": -0.345033,
+        "max": 0.20491,
+        "coefficient_of_variation": 2.41
       },
       {
         "feature_name": "kurtosis_magnitude",
-        "mean": 0.011919,
-        "std": 0.150521,
-        "min": -0.28372,
-        "max": 0.426923,
-        "coefficient_of_variation": 12.6284
+        "mean": -0.016289,
+        "std": 0.138937,
+        "min": -0.296078,
+        "max": 0.324547,
+        "coefficient_of_variation": 8.5296
       },
       {
         "feature_name": "spectral_centroid",
-        "mean": -842.76709,
-        "std": 1878.588745,
-        "min": -4576.699707,
-        "max": 2891.340088,
-        "coefficient_of_variation": 2.2291
+        "mean": -280.282379,
+        "std": 2370.197998,
+        "min": -5183.845703,
+        "max": 4010.741211,
+        "coefficient_of_variation": 8.4565
       },
       {
         "feature_name": "spectral_spread",
-        "mean": 288709.28125,
-        "std": 5938.732422,
-        "min": 270487.25,
-        "max": 300130.5,
-        "coefficient_of_variation": 0.0206
+        "mean": 288013.15625,
+        "std": 5474.213867,
+        "min": 275948.90625,
+        "max": 298638.4375,
+        "coefficient_of_variation": 0.019
       },
       {
         "feature_name": "peak_frequency",
-        "mean": -54707.039062,
-        "std": 294046.3125,
-        "min": -499023.4375,
-        "max": 492187.5,
-        "coefficient_of_variation": 5.3749
+        "mean": 38105.46875,
+        "std": 256943.484375,
+        "min": -479492.1875,
+        "max": 461914.0625,
+        "coefficient_of_variation": 6.743
       },
       {
         "feature_name": "spectral_energy",
-        "mean": 1.032061,
-        "std": 0.006605,
-        "min": 1.015681,
-        "max": 1.045582,
-        "coefficient_of_variation": 0.0064
+        "mean": 1.032669,
+        "std": 0.006371,
+        "min": 1.018646,
+        "max": 1.046763,
+        "coefficient_of_variation": 0.0062
       },
       {
         "feature_name": "spectral_flatness",
-        "mean": 0.557983,
-        "std": 0.021676,
-        "min": 0.510352,
-        "max": 0.597456,
-        "coefficient_of_variation": 0.0388
+        "mean": 0.562799,
+        "std": 0.015981,
+        "min": 0.522136,
+        "max": 0.597766,
+        "coefficient_of_variation": 0.0284
       }
     ]
   },
@@ -197,187 +197,187 @@
     "features": [
       {
         "feature_name": "mean_i",
-        "mean": 0.004514,
-        "std": 0.018472,
-        "min": -0.030383,
-        "max": 0.05153,
-        "coefficient_of_variation": 4.0921
+        "mean": -0.000193,
+        "std": 0.027863,
+        "min": -0.063254,
+        "max": 0.066568,
+        "coefficient_of_variation": 144.0443
       },
       {
         "feature_name": "mean_q",
-        "mean": -0.003585,
-        "std": 0.021324,
-        "min": -0.050684,
-        "max": 0.044343,
-        "coefficient_of_variation": 5.9475
+        "mean": 0.001144,
+        "std": 0.020251,
+        "min": -0.041429,
+        "max": 0.047077,
+        "coefficient_of_variation": 17.7024
       },
       {
         "feature_name": "std_i",
-        "mean": 0.718221,
-        "std": 0.003124,
-        "min": 0.7104,
-        "max": 0.724445,
-        "coefficient_of_variation": 0.0044
+        "mean": 0.718165,
+        "std": 0.003056,
+        "min": 0.710594,
+        "max": 0.725207,
+        "coefficient_of_variation": 0.0043
       },
       {
         "feature_name": "std_q",
-        "mean": 0.717722,
-        "std": 0.004328,
-        "min": 0.708419,
-        "max": 0.728981,
-        "coefficient_of_variation": 0.006
+        "mean": 0.71731,
+        "std": 0.003649,
+        "min": 0.709905,
+        "max": 0.725179,
+        "coefficient_of_variation": 0.0051
       },
       {
         "feature_name": "rms_magnitude",
-        "mean": 1.015781,
-        "std": 0.00355,
-        "min": 1.008554,
-        "max": 1.024099,
+        "mean": 1.015624,
+        "std": 0.003523,
+        "min": 1.008036,
+        "max": 1.023006,
         "coefficient_of_variation": 0.0035
       },
       {
         "feature_name": "mean_magnitude",
-        "mean": 1.008114,
-        "std": 0.003506,
-        "min": 1.001202,
-        "max": 1.016426,
+        "mean": 1.007941,
+        "std": 0.003498,
+        "min": 1.000487,
+        "max": 1.015255,
         "coefficient_of_variation": 0.0035
       },
       {
         "feature_name": "std_magnitude",
-        "mean": 0.124525,
-        "std": 0.003403,
-        "min": 0.117017,
-        "max": 0.131655,
-        "coefficient_of_variation": 0.0273
+        "mean": 0.124653,
+        "std": 0.002835,
+        "min": 0.115724,
+        "max": 0.130354,
+        "coefficient_of_variation": 0.0227
       },
       {
         "feature_name": "peak_magnitude",
-        "mean": 1.41659,
-        "std": 0.04081,
-        "min": 1.345771,
-        "max": 1.516738,
-        "coefficient_of_variation": 0.0288
+        "mean": 1.408528,
+        "std": 0.036539,
+        "min": 1.335315,
+        "max": 1.499089,
+        "coefficient_of_variation": 0.0259
       },
       {
         "feature_name": "signal_power",
-        "mean": 1.031824,
-        "std": 0.007216,
-        "min": 1.017181,
-        "max": 1.048779,
-        "coefficient_of_variation": 0.007
+        "mean": 1.031505,
+        "std": 0.00716,
+        "min": 1.016137,
+        "max": 1.046541,
+        "coefficient_of_variation": 0.0069
       },
       {
         "feature_name": "moment4_i",
-        "mean": 0.298718,
-        "std": 0.005274,
-        "min": 0.284875,
-        "max": 0.307964,
-        "coefficient_of_variation": 0.0177
+        "mean": 0.299475,
+        "std": 0.005202,
+        "min": 0.289237,
+        "max": 0.311638,
+        "coefficient_of_variation": 0.0174
       },
       {
         "feature_name": "moment4_q",
-        "mean": 0.29792,
-        "std": 0.007438,
-        "min": 0.283053,
-        "max": 0.317,
-        "coefficient_of_variation": 0.025
+        "mean": 0.297553,
+        "std": 0.006182,
+        "min": 0.284907,
+        "max": 0.312868,
+        "coefficient_of_variation": 0.0208
       },
       {
         "feature_name": "moment4_magnitude",
-        "mean": 0.000727,
-        "std": 7.8e-05,
-        "min": 0.000545,
-        "max": 0.000861,
-        "coefficient_of_variation": 0.1073
+        "mean": 0.000724,
+        "std": 7e-05,
+        "min": 0.000565,
+        "max": 0.000934,
+        "coefficient_of_variation": 0.0967
       },
       {
         "feature_name": "skew_i",
-        "mean": -0.01099,
-        "std": 0.049219,
-        "min": -0.134369,
-        "max": 0.079516,
-        "coefficient_of_variation": 4.4787
+        "mean": 0.000979,
+        "std": 0.072869,
+        "min": -0.160928,
+        "max": 0.185984,
+        "coefficient_of_variation": 74.4641
       },
       {
         "feature_name": "skew_q",
-        "mean": 0.009084,
-        "std": 0.055822,
-        "min": -0.120989,
-        "max": 0.121172,
-        "coefficient_of_variation": 6.145
+        "mean": -0.002904,
+        "std": 0.052183,
+        "min": -0.124679,
+        "max": 0.111593,
+        "coefficient_of_variation": 17.9714
       },
       {
         "feature_name": "skew_magnitude",
-        "mean": -0.004291,
-        "std": 0.069005,
-        "min": -0.134626,
-        "max": 0.146353,
-        "coefficient_of_variation": 16.0794
+        "mean": -0.000852,
+        "std": 0.065066,
+        "min": -0.114514,
+        "max": 0.180404,
+        "coefficient_of_variation": 76.3509
       },
       {
         "feature_name": "kurtosis_i",
-        "mean": -1.877508,
-        "std": 0.006033,
-        "min": -1.894122,
-        "max": -1.864437,
-        "coefficient_of_variation": 0.0032
+        "mean": -1.874282,
+        "std": 0.00976,
+        "min": -1.887993,
+        "max": -1.841217,
+        "coefficient_of_variation": 0.0052
       },
       {
         "feature_name": "kurtosis_q",
-        "mean": -1.877523,
-        "std": 0.00621,
-        "min": -1.888289,
-        "max": -1.861777,
-        "coefficient_of_variation": 0.0033
+        "mean": -1.876236,
+        "std": 0.006998,
+        "min": -1.889635,
+        "max": -1.861798,
+        "coefficient_of_variation": 0.0037
       },
       {
         "feature_name": "kurtosis_magnitude",
-        "mean": 0.012592,
-        "std": 0.158252,
-        "min": -0.32551,
-        "max": 0.421754,
-        "coefficient_of_variation": 12.5675
+        "mean": -0.009759,
+        "std": 0.147527,
+        "min": -0.341103,
+        "max": 0.292089,
+        "coefficient_of_variation": 15.1169
       },
       {
         "feature_name": "spectral_centroid",
-        "mean": -32.805233,
-        "std": 9831.311523,
-        "min": -23132.240234,
-        "max": 30035.492188,
-        "coefficient_of_variation": 299.6873
+        "mean": -807.091431,
+        "std": 10011.848633,
+        "min": -22681.542969,
+        "max": 20593.34375,
+        "coefficient_of_variation": 12.4049
       },
       {
         "feature_name": "spectral_spread",
-        "mean": 288390.71875,
-        "std": 4085.545166,
-        "min": 278434.90625,
-        "max": 299347.375,
-        "coefficient_of_variation": 0.0142
+        "mean": 287668.03125,
+        "std": 3852.358154,
+        "min": 279160.625,
+        "max": 297432.5,
+        "coefficient_of_variation": 0.0134
       },
       {
         "feature_name": "peak_frequency",
-        "mean": -64140.625,
-        "std": 285284.59375,
-        "min": -496093.75,
-        "max": 448242.1875,
-        "coefficient_of_variation": 4.4478
+        "mean": -20273.435547,
+        "std": 283270.28125,
+        "min": -468750.0,
+        "max": 492187.5,
+        "coefficient_of_variation": 13.9725
       },
       {
         "feature_name": "spectral_energy",
-        "mean": 1.031824,
-        "std": 0.007216,
-        "min": 1.017181,
-        "max": 1.048779,
-        "coefficient_of_variation": 0.007
+        "mean": 1.031505,
+        "std": 0.00716,
+        "min": 1.016137,
+        "max": 1.046541,
+        "coefficient_of_variation": 0.0069
       },
       {
         "feature_name": "spectral_flatness",
-        "mean": 0.56248,
-        "std": 0.013582,
-        "min": 0.531268,
-        "max": 0.590995,
-        "coefficient_of_variation": 0.0241
+        "mean": 0.561549,
+        "std": 0.014891,
+        "min": 0.525283,
+        "max": 0.592315,
+        "coefficient_of_variation": 0.0265
       }
     ]
   },
@@ -388,187 +388,187 @@
     "features": [
       {
         "feature_name": "mean_i",
-        "mean": -0.007102,
-        "std": 0.021898,
-        "min": -0.077077,
-        "max": 0.036356,
-        "coefficient_of_variation": 3.0834
+        "mean": -0.003157,
+        "std": 0.020943,
+        "min": -0.04942,
+        "max": 0.045819,
+        "coefficient_of_variation": 6.6342
       },
       {
         "feature_name": "mean_q",
-        "mean": 0.001902,
-        "std": 0.018206,
-        "min": -0.02546,
-        "max": 0.049407,
-        "coefficient_of_variation": 9.5736
+        "mean": 0.00028,
+        "std": 0.025179,
+        "min": -0.065003,
+        "max": 0.057457,
+        "coefficient_of_variation": 90.0551
       },
       {
         "feature_name": "std_i",
-        "mean": 0.72021,
-        "std": 0.008647,
-        "min": 0.69702,
-        "max": 0.736188,
-        "coefficient_of_variation": 0.012
+        "mean": 0.717129,
+        "std": 0.008056,
+        "min": 0.702434,
+        "max": 0.737367,
+        "coefficient_of_variation": 0.0112
       },
       {
         "feature_name": "std_q",
-        "mean": 0.717684,
-        "std": 0.008459,
-        "min": 0.700509,
-        "max": 0.738036,
-        "coefficient_of_variation": 0.0118
+        "mean": 0.717028,
+        "std": 0.008785,
+        "min": 0.696101,
+        "max": 0.735927,
+        "coefficient_of_variation": 0.0123
       },
       {
         "feature_name": "rms_magnitude",
-        "mean": 1.017213,
-        "std": 0.007879,
-        "min": 0.999364,
-        "max": 1.03474,
-        "coefficient_of_variation": 0.0077
+        "mean": 1.01467,
+        "std": 0.00855,
+        "min": 0.996235,
+        "max": 1.03389,
+        "coefficient_of_variation": 0.0084
       },
       {
         "feature_name": "mean_magnitude",
-        "mean": 0.959065,
-        "std": 0.008341,
-        "min": 0.93891,
-        "max": 0.97894,
-        "coefficient_of_variation": 0.0087
+        "mean": 0.956656,
+        "std": 0.009818,
+        "min": 0.935186,
+        "max": 0.982078,
+        "coefficient_of_variation": 0.0103
       },
       {
         "feature_name": "std_magnitude",
-        "mean": 0.33893,
-        "std": 0.005986,
-        "min": 0.325207,
-        "max": 0.354323,
-        "coefficient_of_variation": 0.0177
+        "mean": 0.338087,
+        "std": 0.006148,
+        "min": 0.323188,
+        "max": 0.356165,
+        "coefficient_of_variation": 0.0182
       },
       {
         "feature_name": "peak_magnitude",
-        "mean": 1.700012,
-        "std": 0.049495,
-        "min": 1.600467,
-        "max": 1.830975,
-        "coefficient_of_variation": 0.0291
+        "mean": 1.694382,
+        "std": 0.050764,
+        "min": 1.608904,
+        "max": 1.846057,
+        "coefficient_of_variation": 0.03
       },
       {
         "feature_name": "signal_power",
-        "mean": 1.034784,
-        "std": 0.016029,
-        "min": 0.998729,
-        "max": 1.070687,
-        "coefficient_of_variation": 0.0155
+        "mean": 1.029628,
+        "std": 0.01736,
+        "min": 0.992484,
+        "max": 1.068928,
+        "coefficient_of_variation": 0.0169
       },
       {
         "feature_name": "moment4_i",
-        "mean": 0.462831,
-        "std": 0.016992,
-        "min": 0.420498,
-        "max": 0.499796,
-        "coefficient_of_variation": 0.0367
+        "mean": 0.456128,
+        "std": 0.014725,
+        "min": 0.431627,
+        "max": 0.494034,
+        "coefficient_of_variation": 0.0323
       },
       {
         "feature_name": "moment4_q",
-        "mean": 0.457222,
-        "std": 0.016052,
-        "min": 0.423722,
-        "max": 0.492472,
-        "coefficient_of_variation": 0.0351
+        "mean": 0.456125,
+        "std": 0.015914,
+        "min": 0.424717,
+        "max": 0.492839,
+        "coefficient_of_variation": 0.0349
       },
       {
         "feature_name": "moment4_magnitude",
-        "mean": 0.030279,
-        "std": 0.001661,
-        "min": 0.026647,
-        "max": 0.033589,
-        "coefficient_of_variation": 0.0548
+        "mean": 0.029903,
+        "std": 0.001496,
+        "min": 0.026542,
+        "max": 0.03443,
+        "coefficient_of_variation": 0.05
       },
       {
         "feature_name": "skew_i",
-        "mean": 0.01334,
-        "std": 0.042616,
-        "min": -0.061497,
-        "max": 0.138815,
-        "coefficient_of_variation": 3.1947
+        "mean": 0.00637,
+        "std": 0.042113,
+        "min": -0.088276,
+        "max": 0.099962,
+        "coefficient_of_variation": 6.6115
       },
       {
         "feature_name": "skew_q",
-        "mean": -0.008045,
-        "std": 0.037423,
-        "min": -0.084018,
-        "max": 0.083521,
-        "coefficient_of_variation": 4.6515
+        "mean": 0.00122,
+        "std": 0.051093,
+        "min": -0.119173,
+        "max": 0.132288,
+        "coefficient_of_variation": 41.8956
       },
       {
         "feature_name": "skew_magnitude",
-        "mean": -0.38131,
-        "std": 0.045221,
-        "min": -0.49324,
-        "max": -0.290075,
-        "coefficient_of_variation": 0.1186
+        "mean": -0.372596,
+        "std": 0.042568,
+        "min": -0.441707,
+        "max": -0.228816,
+        "coefficient_of_variation": 0.1142
       },
       {
         "feature_name": "kurtosis_i",
-        "mean": -1.280253,
-        "std": 0.025687,
-        "min": -1.32124,
-        "max": -1.210369,
-        "coefficient_of_variation": 0.0201
-      },
-      {
-        "feature_name": "kurtosis_q",
-        "mean": -1.27686,
-        "std": 0.031372,
-        "min": -1.345294,
-        "max": -1.202313,
+        "mean": -1.275535,
+        "std": 0.031396,
+        "min": -1.352092,
+        "max": -1.203956,
         "coefficient_of_variation": 0.0246
       },
       {
+        "feature_name": "kurtosis_q",
+        "mean": -1.274623,
+        "std": 0.032719,
+        "min": -1.340029,
+        "max": -1.187949,
+        "coefficient_of_variation": 0.0257
+      },
+      {
         "feature_name": "kurtosis_magnitude",
-        "mean": -0.706063,
-        "std": 0.079944,
-        "min": -0.88292,
-        "max": -0.501925,
-        "coefficient_of_variation": 0.1132
+        "mean": -0.710892,
+        "std": 0.087251,
+        "min": -0.860412,
+        "max": -0.497906,
+        "coefficient_of_variation": 0.1227
       },
       {
         "feature_name": "spectral_centroid",
-        "mean": 507.974487,
-        "std": 9798.095703,
-        "min": -22612.6875,
-        "max": 18128.542969,
-        "coefficient_of_variation": 19.2886
+        "mean": 303.511963,
+        "std": 8543.663086,
+        "min": -20001.839844,
+        "max": 21497.876953,
+        "coefficient_of_variation": 28.1493
       },
       {
         "feature_name": "spectral_spread",
-        "mean": 288374.9375,
-        "std": 3996.171387,
-        "min": 277867.1875,
-        "max": 298100.9375,
-        "coefficient_of_variation": 0.0139
+        "mean": 287509.6875,
+        "std": 4606.343262,
+        "min": 277345.65625,
+        "max": 297985.78125,
+        "coefficient_of_variation": 0.016
       },
       {
         "feature_name": "peak_frequency",
-        "mean": -16933.591797,
-        "std": 283112.46875,
-        "min": -498046.875,
-        "max": 496093.75,
-        "coefficient_of_variation": 16.719
+        "mean": -23203.130859,
+        "std": 259585.875,
+        "min": -442382.8125,
+        "max": 481445.3125,
+        "coefficient_of_variation": 11.1875
       },
       {
         "feature_name": "spectral_energy",
-        "mean": 1.034784,
-        "std": 0.016029,
-        "min": 0.998729,
-        "max": 1.070687,
-        "coefficient_of_variation": 0.0155
+        "mean": 1.029628,
+        "std": 0.01736,
+        "min": 0.992484,
+        "max": 1.068928,
+        "coefficient_of_variation": 0.0169
       },
       {
         "feature_name": "spectral_flatness",
-        "mean": 0.560621,
-        "std": 0.011838,
-        "min": 0.528991,
-        "max": 0.584109,
-        "coefficient_of_variation": 0.0211
+        "mean": 0.560157,
+        "std": 0.01265,
+        "min": 0.535762,
+        "max": 0.583385,
+        "coefficient_of_variation": 0.0226
       }
     ]
   }

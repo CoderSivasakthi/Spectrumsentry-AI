@@ -1,52 +1,52 @@
 {
-  "accuracy": 0.9491,
-  "macro_precision": 0.9493,
-  "macro_recall": 0.9491,
-  "macro_f1": 0.9491,
-  "weighted_f1": 0.9491,
-  "total_samples": 7800,
+  "accuracy": 0.9439,
+  "macro_precision": 0.9444,
+  "macro_recall": 0.9439,
+  "macro_f1": 0.9439,
+  "weighted_f1": 0.9439,
+  "total_samples": 3120,
   "per_class": {
     "BPSK": {
       "precision": 1.0,
       "recall": 1.0,
       "f1_score": 1.0,
-      "support": 2600
+      "support": 1040
     },
     "QPSK": {
-      "precision": 0.9342,
-      "recall": 0.9115,
-      "f1_score": 0.9227,
-      "support": 2600
+      "precision": 0.9338,
+      "recall": 0.8952,
+      "f1_score": 0.9141,
+      "support": 1040
     },
     "16-QAM": {
-      "precision": 0.9136,
-      "recall": 0.9358,
-      "f1_score": 0.9246,
-      "support": 2600
+      "precision": 0.8994,
+      "recall": 0.9365,
+      "f1_score": 0.9176,
+      "support": 1040
     }
   },
   "confidence": {
-    "mean_confidence": 0.9498,
-    "median_confidence": 0.9999,
-    "min_confidence": 0.5007,
+    "mean_confidence": 0.9594,
+    "median_confidence": 1.0,
+    "min_confidence": 0.5005,
     "max_confidence": 1.0,
-    "std_confidence": 0.1211
+    "std_confidence": 0.1063
   },
   "confusion_matrix": [
     [
-      2600,
+      1040,
       0,
       0
     ],
     [
       0,
-      2370,
-      230
+      931,
+      109
     ],
     [
       0,
-      167,
-      2433
+      66,
+      974
     ]
   ],
   "class_names": [
@@ -54,5 +54,5 @@
     "QPSK",
     "16-QAM"
   ],
-  "inference_time_ms_per_sample": 0.0
+  "inference_time_ms_per_sample": 0.001
 }

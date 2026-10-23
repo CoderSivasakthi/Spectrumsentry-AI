@@ -2,6 +2,8 @@ import React from 'react';
 import { MonitoringProvider, useMonitoring } from './context/MonitoringContext';
 import { AppLayout } from './components/layout/AppLayout';
 import { Dashboard } from './pages/Dashboard';
+import { LinkTelemetryView } from './pages/LinkTelemetryView';
+import { SignalLabView } from './pages/SignalLabView';
 import { SignalHistory } from './pages/SignalHistory';
 import { SystemAbout } from './components/about/SystemAbout';
 
@@ -9,11 +11,15 @@ const MainContent: React.FC = () => {
   const { activeTab } = useMonitoring();
 
   switch (activeTab) {
-    case 'history':
+    case 'link':
+      return <LinkTelemetryView />;
+    case 'signal':
+      return <SignalLabView />;
+    case 'sessions':
       return <SignalHistory />;
-    case 'about':
+    case 'system':
       return <SystemAbout />;
-    case 'dashboard':
+    case 'live':
     default:
       return <Dashboard />;
   }

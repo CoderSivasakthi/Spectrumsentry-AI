@@ -124,6 +124,56 @@ export interface SignalEvidenceInput {
   extra_data?: Record<string, unknown>;
 }
 
+export interface SignalSimulateRequest {
+  modulation: string;
+  snr_db: number;
+  sample_count?: number;
+  seed?: number;
+}
+
+export interface SignalSimulateResult {
+  requested_modulation: string;
+  requested_snr_db: number;
+  measured_snr_db: number;
+  predicted_modulation: string | null;
+  ai_confidence: number | null;
+  is_outlier: boolean | null;
+  novelty_score: number | null;
+  signal_quality: string | null;
+  classification_matches: boolean;
+  sample_count: number;
+  snapshot: UnifiedMonitoringSnapshot;
+}
+
+export interface CommunicationMetricsDetail {
+  session_id: string;
+  status: string;
+  health_score: number;
+  packets_sent: number;
+  packets_received: number;
+  packets_lost: number;
+  packet_loss_percent: number;
+  latency_ms: number;
+  avg_latency_ms: number;
+  min_latency_ms: number;
+  max_latency_ms: number;
+  median_latency_ms: number;
+  p95_latency_ms: number;
+  p99_latency_ms: number;
+  jitter_ms: number;
+  bytes_sent: number;
+  bytes_received: number;
+  throughput_bps: number;
+  throughput_kbps: number;
+  throughput_mbps: number;
+  interruption_count: number;
+  total_interruption_duration_ms: number;
+  recovery_count: number;
+  is_interrupted: boolean;
+  started_at: string | null;
+  last_packet_time: string | null;
+}
+
 export interface WebSocketMessage<T = unknown> {
   type: 'monitoring_snapshot' | 'signal_update' | 'session_started' | 'session_stopped' | string;
   timestamp: string;

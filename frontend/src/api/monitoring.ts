@@ -1,5 +1,6 @@
 import { apiClient } from './client';
 import {
+  CommunicationMetricsDetail,
   MonitoringHistoryResponse,
   MonitoringSessionResponse,
   MonitoringSessionStartRequest,
@@ -7,6 +8,8 @@ import {
   MonitoringSessionSummary,
   SessionStatusResponse,
   SignalEvidenceInput,
+  SignalSimulateRequest,
+  SignalSimulateResult,
   UnifiedMonitoringSnapshot,
 } from '../types/monitoring';
 
@@ -57,6 +60,52 @@ export const updateSignalEvidence = async (
   const response = await apiClient.post<UnifiedMonitoringSnapshot>(
     '/api/monitoring/signal',
     signalInput
+  );
+  return response.data;
+};
+
+export const simulateSignal = async (
+  request: SignalSimulateRequest
+): Promise<SignalSimulateResult> => {
+  const response = await apiClient.post<SignalSimulateResult>(
+    '/api/monitoring/signal/simulate',
+    {
+      sample_count: 2048,
+      ...request,
+    }
+  );
+  return response.data;
+};
+
+export const sendTestPacket = async (packet: {
+  session_id: string;
+  sequence_number: number;
+  sender_timestamp: number;
+  payload_size: number;
+  client_rtt_ms?: number;
+}): Promise<{ received_packets: number; status: string; health_score: number }> => {
+  const response = await apiClient.post('/api/communication/packet', packet);
+  return response.data;
+};
+
+export const stopCommunicationSession = async (
+  sessionId: string,
+  reason = 'completed'
+) => {
+  const response = await apiClient.post('/api/communication/session/stop', {
+    session_id: sessionId,
+    reason,
+  });
+  return response.data;
+};
+
+export const getCommunicationMetrics = async (
+  sessionId?: string
+): Promise<CommunicationMetricsDetail> => {
+  const params = sessionId ? { session_id: sessionId } : {};
+  const response = await apiClient.get<CommunicationMetricsDetail>(
+    '/api/communication/metrics',
+    { params }
   );
   return response.data;
 };

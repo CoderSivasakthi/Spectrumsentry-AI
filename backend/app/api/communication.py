@@ -118,6 +118,39 @@ async def get_metrics(
 
 
 @router.get(
+    "/wifi/rssi",
+    summary="Get Wi-Fi RSSI sample (optional real-link physical evidence)",
+    description=(
+        "Corrected report fix #13: optional stream of the OS-reported Wi-Fi signal "
+        "strength to substitute for simulated SNR in real-link decisions. Returns "
+        "available: false when no WLAN interface or parseable output exists."
+    ),
+)
+async def get_wifi_rssi(
+    interface: Optional[str] = Query(None, description="Optional Linux interface hint (e.g. wlp3s0)")
+) -> Dict[str, Any]:
+    """Collect one Wi-Fi RSSI sample from the operating system."""
+    from backend.app.communication.rssi import RssiSample, collect_rssi
+
+    sample: Optional[RssiSample] = collect_rssi(interface)
+    if sample is None:
+        return {
+            "available": False,
+            "detail": "No WLAN RSSI source available on this platform/configuration.",
+        }
+    return {
+        "available": True,
+        "rssi_dbm": sample.rssi_dbm,
+        "noise_floor_dbm": sample.noise_floor_dbm,
+        "link_id": sample.link_id,
+        "platform": sample.platform,
+        "dbm_estimate": sample.dbm_estimate,
+        "timestamp": sample.timestamp.isoformat(),
+        "source": sample.source,
+    }
+
+
+@router.get(
     "/history",
     response_model=SessionHistoryResponse,
     summary="Get communication session history",

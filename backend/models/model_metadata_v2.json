@@ -1,0 +1,101 @@
+{
+  "model_version": "v2.0-cumulant",
+  "model_filename": "modulation_mlp_v2.joblib",
+  "feature_set": "cumulant_v2",
+  "feature_names": [
+    "m20_abs",
+    "c40_abs",
+    "c41_abs",
+    "c42_real",
+    "amplitude_mean",
+    "amplitude_std"
+  ],
+  "feature_count": 6,
+  "label_mapping": {
+    "0": "BPSK",
+    "1": "QPSK",
+    "2": "16-QAM"
+  },
+  "dataset_info": {
+    "feature_set": "cumulant_v2",
+    "feature_count": 6,
+    "random_carrier_phase": true,
+    "snr_grid_db": [
+      -5.0,
+      -4.0,
+      -3.0,
+      -2.0,
+      -1.0,
+      0.0,
+      1.0,
+      2.0,
+      3.0,
+      4.0,
+      5.0,
+      6.0,
+      7.0,
+      8.0,
+      9.0,
+      10.0,
+      11.0,
+      12.0,
+      13.0,
+      14.0,
+      15.0,
+      16.0,
+      17.0,
+      18.0,
+      19.0,
+      20.0
+    ],
+    "samples_per_condition": 300,
+    "frame_samples": 1024,
+    "label_map": {
+      "BPSK": 0,
+      "QPSK": 1,
+      "16-QAM": 2
+    },
+    "base_seed": 2024,
+    "train_samples": 18720,
+    "test_samples": 4680
+  },
+  "evaluation": {
+    "overall": {
+      "accuracy": 0.9088,
+      "macro_precision": 0.9151,
+      "macro_recall": 0.9088,
+      "macro_f1": 0.9082,
+      "weighted_f1": 0.9082,
+      "total_samples": 4680.0
+    },
+    "per_snr": {
+      "-5.0": 0.6556,
+      "-4.0": 0.6833,
+      "-3.0": 0.6722,
+      "-2.0": 0.7,
+      "-1.0": 0.7333,
+      "0.0": 0.7778,
+      "1.0": 0.8278,
+      "2.0": 0.8389,
+      "3.0": 0.8611,
+      "4.0": 0.9333,
+      "5.0": 0.9722,
+      "6.0": 0.9722,
+      "7.0": 1.0,
+      "8.0": 1.0,
+      "9.0": 1.0,
+      "10.0": 1.0,
+      "11.0": 1.0,
+      "12.0": 1.0,
+      "13.0": 1.0,
+      "14.0": 1.0,
+      "15.0": 1.0,
+      "16.0": 1.0,
+      "17.0": 1.0,
+      "18.0": 1.0,
+      "19.0": 1.0,
+      "20.0": 1.0
+    },
+    "high_snr_accuracy": 1.0
+  }
+}

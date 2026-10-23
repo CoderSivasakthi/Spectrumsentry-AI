@@ -2,9 +2,11 @@
 
 from contextlib import asynccontextmanager
 from typing import Dict
+from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 
 from backend.app.api.routes import api_router
 from backend.app.config.settings import get_settings
@@ -57,6 +59,22 @@ async def health_check() -> Dict[str, str]:
     return {
         "status": "healthy",
     }
+
+
+@app.get(
+    "/sender",
+    response_class=HTMLResponse,
+    summary="Phone-browser packet sender page",
+    description=(
+        "Corrected report fix #1: self-contained browser test client for phone-based "
+        "hotspot runs (test cases TC-01 to TC-04). Open http://<server-host>:" + str(settings.PORT) + "/sender "
+        "on the phone; it measures RTT on the sender clock and can simulate radio pauses."
+    ),
+)
+async def sender_page() -> HTMLResponse:
+    """Serve the standalone HTML sender page for real device tests."""
+    html_path = Path(__file__).resolve().parent / "static" / "sender.html"
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"), status_code=200)
 
 
 @app.websocket("/ws/communication")

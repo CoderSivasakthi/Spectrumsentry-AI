@@ -17,6 +17,8 @@ interface StatusBadgeProps {
   className?: string;
 }
 
+type Variant = 'ok' | 'warn' | 'crit' | 'info' | 'muted';
+
 export const StatusBadge: React.FC<StatusBadgeProps> = ({
   status,
   size = 'md',
@@ -25,17 +27,20 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 }) => {
   const norm = (status || '').toUpperCase();
 
-  let colorClasses = 'bg-slate-800 text-slate-300 border-slate-700';
+  let variant: Variant = 'muted';
   let Icon = HelpCircle;
 
   switch (norm) {
     case 'NORMAL':
     case 'CONNECTED':
     case 'CONSISTENT':
-    case 'INFO':
     case 'EXCELLENT':
     case 'GOOD':
-      colorClasses = 'bg-emerald-950/60 text-emerald-300 border-emerald-500/30';
+      variant = 'ok';
+      Icon = CheckCircle2;
+      break;
+    case 'INFO':
+      variant = 'info';
       Icon = CheckCircle2;
       break;
     case 'DEGRADED':
@@ -43,49 +48,37 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
     case 'FAIR':
     case 'CONNECTING':
     case 'RECONNECTING':
-      colorClasses = 'bg-amber-950/60 text-amber-300 border-amber-500/30';
+      variant = 'warn';
       Icon = AlertTriangle;
       break;
     case 'INTERRUPTED':
     case 'CRITICAL':
     case 'DISCONNECTED':
     case 'POOR':
-      colorClasses = 'bg-rose-950/60 text-rose-300 border-rose-500/30';
+      variant = 'crit';
       Icon = XOctagon;
       break;
     case 'RECOVERING':
     case 'STARTING':
-      colorClasses = 'bg-cyan-950/60 text-cyan-300 border-cyan-500/30';
+      variant = 'info';
       Icon = RotateCcw;
       break;
     case 'REVIEW':
     case 'CONFLICTING':
-      colorClasses = 'bg-purple-950/60 text-purple-300 border-purple-500/30';
+      variant = 'muted';
       Icon = ShieldAlert;
       break;
     case 'UNCORRELATED':
-      colorClasses = 'bg-slate-800/80 text-slate-300 border-slate-600/30';
+      variant = 'muted';
       Icon = ShieldCheck;
       break;
   }
 
-  const sizeClasses = {
-    sm: 'text-xs px-2 py-0.5 gap-1',
-    md: 'text-xs px-2.5 py-1 gap-1.5 font-medium',
-    lg: 'text-sm px-3.5 py-1.5 gap-2 font-semibold',
-  }[size];
-
-  const iconSizes = {
-    sm: 'w-3 h-3',
-    md: 'w-3.5 h-3.5',
-    lg: 'w-4 h-4',
-  }[size];
+  const sizeClass = { sm: 'badge--sm', md: '', lg: 'badge--lg' }[size];
 
   return (
-    <span
-      className={`inline-flex items-center rounded-md border tracking-wider font-mono uppercase ${sizeClasses} ${colorClasses} ${className}`}
-    >
-      {showIcon && <Icon className={`${iconSizes} shrink-0`} />}
+    <span className={`badge badge--${variant} ${sizeClass} ${className}`.trim()}>
+      {showIcon && <Icon size={size === 'lg' ? 13 : 12} strokeWidth={2.2} />}
       <span>{norm}</span>
     </span>
   );

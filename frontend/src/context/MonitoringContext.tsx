@@ -11,6 +11,8 @@ import {
   ChartDataPoint,
   MonitoringSessionStartRequest,
   SignalEvidenceInput,
+  SignalSimulateRequest,
+  SignalSimulateResult,
   TimelineEvent,
   UnifiedMonitoringSnapshot,
   WebSocketConnectionStatus,
@@ -18,14 +20,16 @@ import {
 } from '../types/monitoring';
 import {
   getMonitoringStatus,
+  simulateSignal,
   startMonitoringSession,
   stopMonitoringSession,
   updateSignalEvidence,
 } from '../api/monitoring';
 import { checkBackendHealth } from '../api/client';
 import { useMonitoringWebSocket } from '../hooks/useMonitoringWebSocket';
+import { useLinkTestStream, LinkTestStream } from '../hooks/useLinkTestStream';
 
-export type NavigationTab = 'dashboard' | 'history' | 'about';
+export type NavigationTab = 'live' | 'link' | 'signal' | 'sessions' | 'system';
 
 export interface MonitoringContextValue {
   snapshot: UnifiedMonitoringSnapshot | null;
@@ -37,9 +41,11 @@ export interface MonitoringContextValue {
   timeline: TimelineEvent[];
   activeTab: NavigationTab;
   setActiveTab: (tab: NavigationTab) => void;
+  linkTest: LinkTestStream;
   startSession: (req?: MonitoringSessionStartRequest) => Promise<void>;
   stopSession: (reason?: string) => Promise<void>;
   submitSignal: (sigIn: SignalEvidenceInput) => Promise<void>;
+  runSignalSimulation: (req: SignalSimulateRequest) => Promise<SignalSimulateResult | null>;
   refresh: () => Promise<void>;
 }
 
@@ -55,9 +61,10 @@ export const MonitoringProvider: React.FC<{ children: ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
   const [liveHistory, setLiveHistory] = useState<ChartDataPoint[]>([]);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
-  const [activeTab, setActiveTab] = useState<NavigationTab>('dashboard');
+  const [activeTab, setActiveTab] = useState<NavigationTab>('live');
 
   const prevStatusRef = useRef<string | null>(null);
+  const prevCommStatusRef = useRef<string | null>(null);
   const prevSessionRef = useRef<string | null>(null);
 
   const addTimelineEvent = useCallback((event: Omit<TimelineEvent, 'id'>) => {
@@ -114,6 +121,29 @@ export const MonitoringProvider: React.FC<{ children: ReactNode }> = ({ children
       }
       prevStatusRef.current = currentDecisionStatus;
 
+      // Track communication link status transitions
+      const currentCommStatus = newSnapshot.communication?.status ?? null;
+      if (
+        currentCommStatus &&
+        prevCommStatusRef.current &&
+        prevCommStatusRef.current !== currentCommStatus &&
+        prevCommStatusRef.current !== 'STOPPED'
+      ) {
+        const commTypeMap: Record<string, TimelineEvent['type']> = {
+          CONNECTED: 'success',
+          DEGRADED: 'warning',
+          INTERRUPTED: 'critical',
+          RECOVERING: 'info',
+        };
+        addTimelineEvent({
+          timestamp: timeStr,
+          type: commTypeMap[currentCommStatus] || 'info',
+          title: `Link status: ${prevCommStatusRef.current.toLowerCase()} → ${currentCommStatus.toLowerCase()}`,
+          category: 'COMMUNICATION',
+        });
+      }
+      prevCommStatusRef.current = currentCommStatus;
+
       // Track Session Start / Stop
       const currentSessionId = newSnapshot.monitoring_session_id;
       if (currentSessionId && prevSessionRef.current !== currentSessionId) {
@@ -165,6 +195,17 @@ export const MonitoringProvider: React.FC<{ children: ReactNode }> = ({ children
     onSnapshot: handleSnapshotUpdate,
     onEvent: handleWebSocketEvent,
   });
+
+  // Packet transmitter lives here (not in a view) so the stream survives tab switches
+  const linkTest = useLinkTestStream();
+
+  // Auto-stop the transmitter when there is no communication session to feed
+  const commSessionForStream = snapshot?.communication_session_id ?? null;
+  useEffect(() => {
+    if (!commSessionForStream && linkTest.running) {
+      linkTest.stop({ silent: true });
+    }
+  }, [commSessionForStream, linkTest]);
 
   // REST initial fetch and health check
   const refresh = useCallback(async () => {
@@ -221,6 +262,20 @@ export const MonitoringProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
+  const runSignalSimulation = async (
+    req: SignalSimulateRequest
+  ): Promise<SignalSimulateResult | null> => {
+    try {
+      setError(null);
+      const result = await simulateSignal(req);
+      handleSnapshotUpdate(result.snapshot);
+      return result;
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Signal simulation failed.');
+      return null;
+    }
+  };
+
   const value: MonitoringContextValue = {
     snapshot,
     connectionStatus,
@@ -231,9 +286,11 @@ export const MonitoringProvider: React.FC<{ children: ReactNode }> = ({ children
     timeline,
     activeTab,
     setActiveTab,
+    linkTest,
     startSession,
     stopSession,
     submitSignal,
+    runSignalSimulation,
     refresh,
   };
 

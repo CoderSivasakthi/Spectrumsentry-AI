@@ -39,10 +39,11 @@ def evaluate_rules(
     Rules evaluate in strict precedence:
         1. Link Interruption (Active silence timeout)
         2. Link Recovery (Resumed silence state)
-        3. Cross-Domain Conflict / Anomaly (High SNR with severe loss, or clean link with very low AI confidence)
-        4. Network Telemetry Degradation (High loss, latency, or jitter)
-        5. Signal Quality Degradation (Low or negative SNR, poor envelope)
-        6. Normal Baseline Operation (Stable packet transport, verified modulation)
+        3. Novelty (Out-of-distribution signal signature from the novelty detector)
+        4. Cross-Domain Conflict / Anomaly (High SNR with severe loss, or clean link with very low AI confidence)
+        5. Network Telemetry Degradation (High loss, latency, or jitter)
+        6. Signal Quality Degradation (Low or negative SNR, poor envelope)
+        7. Normal Baseline Operation (Stable packet transport, verified modulation)
 
     Args:
         signal: Optional physical-layer signal processing and AI evidence.
@@ -63,6 +64,7 @@ def evaluate_rules(
     is_recovering = comm and comm.status == "RECOVERING"
     snr_db = signal.measured_snr_db if signal and signal.measured_snr_db is not None else None
     ai_conf = signal.confidence if signal and signal.confidence is not None else None
+    is_outlier = bool(signal.is_outlier) if signal and signal.is_outlier is not None else False
 
     # ---------------------------------------------------------
     # RULE 1: Active Communication Interruption
@@ -113,7 +115,79 @@ def evaluate_rules(
         )
 
     # ---------------------------------------------------------
-    # RULE 3: Cross-Domain Conflict — High SNR but Severe Loss
+    # RULE 3: No Packet Traffic — link test open but transport unverified
+    # ---------------------------------------------------------
+    no_traffic = (
+        comm is not None
+        and comm.packets_received is not None
+        and comm.packets_received == 0
+        and not is_recovering
+    )
+    if no_traffic:
+        triggered_rules.append("RULE_NO_PACKET_TRAFFIC")
+        factors = [
+            "Link test session is open but zero packets have been received",
+            f"Reported transport status: {comm.status}" if comm and comm.status else "Transport status unknown",
+        ]
+        return (
+            RuleEvaluationResult(
+                rule_id="RULE_NO_PACKET_TRAFFIC",
+                name="Link Test Without Traffic",
+                status=OverallStatus.REVIEW,
+                consistency=ConsistencyStatus.UNCORRELATED,
+                reason=(
+                    "No telemetry packets have arrived since the link test started, so transport "
+                    "health cannot actually be verified yet."
+                ),
+                contributing_factors=factors,
+                recommendations=[
+                    "Verify the packet transmitter is running and pointed at the active session.",
+                    "Confirm the communication session ID matches the transmitter's target.",
+                    "Packet loss/health stay optimistic until real traffic is observed; treat 0-packet state as unverified.",
+                ],
+                priority=88,
+            ),
+            triggered_rules,
+        )
+
+    # ---------------------------------------------------------
+    # RULE 4: Novelty — Physical signal outside supported modulation set
+    # ---------------------------------------------------------
+    if is_outlier:
+        triggered_rules.append("RULE_NOVELTY_OUTLIER")
+        factors = [
+            "Novelty detector flagged the feature vector as out-of-distribution "
+            "for all supported modulations",
+        ]
+        if signal and signal.predicted_modulation:
+            factors.append(f"Classifier best guess (unreliable): {signal.predicted_modulation}")
+        if ai_conf is not None:
+            factors.append(f"Classification confidence ({ai_conf:.1%}) applies to a class not actually supported")
+
+        return (
+            RuleEvaluationResult(
+                rule_id="RULE_NOVELTY_OUTLIER",
+                name="Unsupported Signal Signature (Novelty Detected)",
+                status=OverallStatus.REVIEW,
+                consistency=ConsistencyStatus.CONFLICTING if ai_conf is not None and ai_conf >= 0.7 else ConsistencyStatus.UNCORRELATED,
+                reason=(
+                    "Signal features do not resemble any supported modulation (BPSK/QPSK/16-QAM). "
+                    "The classifier can only output supported classes, so its prediction here is "
+                    "unreliable and must not be reported as a verified classification."
+                ),
+                contributing_factors=factors,
+                recommendations=[
+                    "Do not trust the modulation label until the signal is re-examined.",
+                    "Inspect the constellation and spectrum manually for a new/interfering waveform.",
+                    "Add the observed signature to the training set if it represents a new supported service.",
+                ],
+                priority=85,
+            ),
+            triggered_rules,
+        )
+
+    # ---------------------------------------------------------
+    # RULE 4: Cross-Domain Conflict — High SNR but Severe Loss
     # ---------------------------------------------------------
     has_high_snr = snr_db is not None and snr_db >= settings.DECISION_CONFLICT_SNR_THRESHOLD
     has_severe_loss = loss_pct >= settings.DECISION_CONFLICT_LOSS_THRESHOLD
@@ -183,7 +257,7 @@ def evaluate_rules(
         )
 
     # ---------------------------------------------------------
-    # RULE 5: Network Telemetry Degradation
+    # RULE 6: Network Telemetry Degradation
     # ---------------------------------------------------------
     is_net_degraded = (
         loss_pct >= settings.COMMUNICATION_PACKET_LOSS_WARNING_PERCENT
@@ -226,7 +300,7 @@ def evaluate_rules(
         )
 
     # ---------------------------------------------------------
-    # RULE 6: Signal Quality Degradation
+    # RULE 7: Signal Quality Degradation
     # ---------------------------------------------------------
     is_signal_degraded = (
         (snr_db is not None and snr_db < settings.DECISION_SNR_WARNING_DB)
@@ -259,7 +333,7 @@ def evaluate_rules(
         )
 
     # ---------------------------------------------------------
-    # RULE 7: Normal Baseline Operation
+    # RULE 8: Normal Baseline Operation
     # ---------------------------------------------------------
     triggered_rules.append("RULE_NORMAL_OPERATION")
     factors = [
@@ -274,6 +348,18 @@ def evaluate_rules(
         factors.append(f"Signal SNR is adequate ({snr_db:.1f} dB)")
 
     consistency = ConsistencyStatus.CONSISTENT if (signal and comm) else ConsistencyStatus.UNCORRELATED
+    if signal and comm:
+        reason = (
+            "Communication link operates within normal parameters with verified signal "
+            "quality and stable transport."
+        )
+    elif comm:
+        reason = (
+            "Transport metrics are within baseline limits, but no physical-layer signal "
+            "evidence is available for cross-verification yet."
+        )
+    else:
+        reason = "Only physical-layer signal evidence is available and it is within baseline limits."
 
     return (
         RuleEvaluationResult(
@@ -281,7 +367,7 @@ def evaluate_rules(
             name="Normal Communication Operation",
             status=OverallStatus.NORMAL,
             consistency=consistency,
-            reason="Communication link operates within normal parameters with verified signal quality and stable transport.",
+            reason=reason,
             contributing_factors=factors,
             recommendations=[
                 "Continue standard communication monitoring.",
@@ -309,6 +395,20 @@ def get_all_rules_info() -> List[DecisionRuleInfo]:
             category="Communication",
             priority=90,
             description="Triggers on arrival of first packet following a silence timeout.",
+        ),
+        DecisionRuleInfo(
+            rule_id="RULE_NO_PACKET_TRAFFIC",
+            name="Link Test Without Traffic",
+            category="Communication",
+            priority=88,
+            description="Flags review when a link test session is open but zero packets have been received, so transport health is unverified.",
+        ),
+        DecisionRuleInfo(
+            rule_id="RULE_NOVELTY_OUTLIER",
+            name="Unsupported Signal Signature (Novelty Detected)",
+            category="Signal",
+            priority=85,
+            description="Flags review when the novelty detector marks the signal features as out-of-distribution for all supported modulations.",
         ),
         DecisionRuleInfo(
             rule_id="RULE_CONFLICT_HIGH_SNR_HIGH_LOSS",

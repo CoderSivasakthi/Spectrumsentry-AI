@@ -15,6 +15,10 @@ from pathlib import Path
 # Add project root to path for direct execution
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from _bootstrap import force_utf8_stdio
+force_utf8_stdio()
+
+
 import numpy as np
 from backend.app.signal_processing import (
     add_awgn,

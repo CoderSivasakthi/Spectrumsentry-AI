@@ -38,6 +38,8 @@ class SignalSnapshot(BaseModel):
     ai_confidence: Optional[float] = Field(default=None, description="AI classification confidence [0.0 - 1.0]")
     estimated_snr_db: Optional[float] = Field(default=None, description="Estimated or measured SNR in decibels")
     signal_quality: Optional[str] = Field(default=None, description="Qualitative signal tier: EXCELLENT, GOOD, FAIR, POOR")
+    is_outlier: Optional[bool] = Field(default=None, description="Novelty-detector flag: signal does not match any supported modulation")
+    novelty_score: Optional[float] = Field(default=None, description="Continuous novelty score in [0, 1] (1 = extreme outlier)")
 
 
 class DecisionSnapshot(BaseModel):
@@ -74,12 +76,37 @@ class SignalEvidenceInput(BaseModel):
     ai_confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="AI classification confidence")
     estimated_snr_db: Optional[float] = Field(default=None, description="Measured or estimated SNR in dB")
     signal_quality: Optional[str] = Field(default=None, description="Qualitative signal tier: EXCELLENT, GOOD, FAIR, POOR")
+    is_outlier: Optional[bool] = Field(default=None, description="Novelty-detector verdict (computed server-side when omitted)")
+    novelty_score: Optional[float] = Field(default=None, description="Continuous novelty score in [0, 1]")
     timestamp: Optional[datetime] = Field(default=None, description="Observation timestamp (defaults to current time)")
-    features: Optional[List[float]] = Field(default=None, description="Optional 23-element DSP feature vector for automated AI inference")
+    features: Optional[List[float]] = Field(default=None, description="Optional DSP feature vector for automated AI inference")
     signal_power: Optional[float] = Field(default=None, description="Estimated baseband signal power")
     noise_power: Optional[float] = Field(default=None, description="Estimated channel noise power")
     experiment_id: Optional[str] = Field(default=None, description="Optional linked experiment ID to pull signal parameters from")
     extra_data: Optional[Dict[str, Any]] = Field(default=None, description="Additional signal context metadata")
+
+
+class SignalSimulateRequest(BaseModel):
+    """Request payload to synthesize a signal and run the real AI classification pipeline."""
+    modulation: str = Field(..., description="Target modulation to synthesize: BPSK, QPSK, or 16-QAM")
+    snr_db: float = Field(..., ge=-20.0, le=40.0, description="AWGN channel SNR applied to the synthesized signal")
+    sample_count: int = Field(default=2048, ge=256, le=8192, description="Number of complex samples to generate")
+    seed: Optional[int] = Field(default=None, description="Optional seed for reproducible simulation")
+
+
+class SignalSimulateResult(BaseModel):
+    """Result of a synthesized-signal AI classification run."""
+    requested_modulation: str
+    requested_snr_db: float
+    measured_snr_db: float
+    predicted_modulation: Optional[str] = None
+    ai_confidence: Optional[float] = None
+    is_outlier: Optional[bool] = None
+    novelty_score: Optional[float] = None
+    signal_quality: Optional[str] = None
+    classification_matches: bool
+    sample_count: int
+    snapshot: UnifiedMonitoringSnapshot
 
 
 class MonitoringSessionStartRequest(BaseModel):

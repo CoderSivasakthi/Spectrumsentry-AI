@@ -21,6 +21,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from _bootstrap import force_utf8_stdio
+force_utf8_stdio()
+
+
 from experiments.ai.evaluator import AIEvaluator
 from experiments.ai.snr_sweep import SNRSweepExperiment
 from experiments.common.config import DEFAULT_REPORTS_DIR

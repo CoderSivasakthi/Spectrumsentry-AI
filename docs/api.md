@@ -11,7 +11,7 @@
 
 ## Future Phase Endpoints
 - Signal Generation & DSP (`/api/signals/*`)
-- AI Classification & Anomaly Detection (`/api/ai/*`)
+- AI Classification & Novelty Detection (`/api/ai/*`)
 - Communication Monitoring (`/api/monitoring/*`)
 - Experiment History & Export (`/api/experiments/*`)
 - Real-time Telemetry (`/ws/*`)

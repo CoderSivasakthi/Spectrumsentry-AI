@@ -95,7 +95,9 @@ class SessionMonitor:
         self.interruption_detector: InterruptionDetector = InterruptionDetector(
             timeout_seconds=timeout_seconds
         )
-        self.recovery_detector: RecoveryDetector = RecoveryDetector()
+        self.recovery_detector: RecoveryDetector = RecoveryDetector(
+            required_consecutive=settings.COMMUNICATION_RECOVERY_CONFIRMATION_PACKETS
+        )
 
         # Event log
         self.events: List[Dict[str, Any]] = []
@@ -104,6 +106,9 @@ class SessionMonitor:
         self.warning_latency_ms: float = settings.COMMUNICATION_LATENCY_WARNING_MS
         self.warning_loss_percent: float = settings.COMMUNICATION_PACKET_LOSS_WARNING_PERCENT
         self.warning_jitter_ms: float = settings.COMMUNICATION_JITTER_WARNING_MS
+        self.LATENCY_FALLBACK_MAX_MS: float = (
+            settings.COMMUNICATION_LATENCY_FALLBACK_MAX_SECONDS * 1000.0
+        )
 
         # Timestamps
         self.start_perf_time: Optional[float] = None
@@ -197,11 +202,23 @@ class SessionMonitor:
 
         # Latency Calculation
         # Prefer client-measured RTT if provided, otherwise compute one-way server-client delta
+        # from the sender timestamp. The fallback is only trusted when the delta is small
+        # enough to plausibly come from a shared clock — a mismatched epoch (e.g. a sender
+        # timestamp of 0 against a server epoch clock) would poison health scoring with
+        # astronomically large latencies (corrected report issue #9), so ignore it instead.
         if packet.client_rtt_ms is not None:
-            latency_ms = max(0.0, float(packet.client_rtt_ms))
+            self.latencies_ms.append(round(max(0.0, float(packet.client_rtt_ms)), 2))
         else:
-            latency_ms = max(0.0, (arrival_time - packet.sender_timestamp) * 1000.0)
-        self.latencies_ms.append(round(latency_ms, 2))
+            one_way_ms = (arrival_time - packet.sender_timestamp) * 1000.0
+            if 0.0 <= one_way_ms <= self.LATENCY_FALLBACK_MAX_MS:
+                self.latencies_ms.append(round(one_way_ms, 2))
+            else:
+                logger.debug(
+                    "Ignoring implausible one-way latency %.2f ms for session %s"
+                    " (sender clock likely out of sync)",
+                    one_way_ms,
+                    self.session_id,
+                )
 
         # Recompute health and status
         expected = self._current_expected_packets()
@@ -351,7 +368,7 @@ class SessionMonitor:
 
         # If interrupted when closed, cap the interruption
         if self.interruption_detector.is_interrupted and self.interruption_detector.current_interruption:
-            curr = time.time()
+            curr = time.monotonic()
             inter = self.interruption_detector.current_interruption
             inter.end_time = curr
             dur = max(0.0, (curr - inter.start_time) * 1000.0)
@@ -486,7 +503,11 @@ class PacketMonitor:
             self.start_session(SessionStartRequest(session_id=session_id), db)
 
         monitor = self.sessions[session_id]
-        arrival_time = time.time()
+        # Interrupt/recovery deltas are computed against this value, so use the
+        # monotonic clock: wall-clock NTP syncs would corrupt durations
+        # (corrected report fix #10). Keep the domain consistent across every call
+        # site that touches the detectors.
+        arrival_time = time.monotonic()
 
         ack, generated_events = monitor.record_packet(packet, arrival_time)
 
@@ -629,8 +650,8 @@ class PacketMonitor:
             )
 
         monitor = self.sessions[target_id]
-        # Check timeout tick on read
-        monitor.check_timeout_tick(time.time())
+        # Check timeout tick on read (monotonic domain, same as packet arrival)
+        monitor.check_timeout_tick(time.monotonic())
         return monitor.get_metrics()
 
     def get_session_status(self, session_id: Optional[str] = None) -> Dict[str, Any]:
@@ -638,7 +659,7 @@ class PacketMonitor:
         target_id = session_id or self.active_session_id
         if target_id and target_id in self.sessions:
             monitor = self.sessions[target_id]
-            monitor.check_timeout_tick(time.time())
+            monitor.check_timeout_tick(time.monotonic())
             return {
                 "session_id": target_id,
                 "status": monitor.status.value,

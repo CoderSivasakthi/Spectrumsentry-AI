@@ -125,6 +125,41 @@ class TestSessionMonitor:
         assert metrics.packets_lost == 0
         assert metrics.packet_loss_percent == 0.0
 
+    def test_latency_fallback_rejects_cross_clock_garbage(self):
+        """Corrected report issue #9: one-way fallback from a mismatched clock epoch
+        (e.g. sender_timestamp=0 vs epoch arrival) must be ignored, not recorded."""
+        monitor = SessionMonitor(session_id="clock_mismatch", timeout_seconds=2.0)
+        t_arrival = 1000.0  # monotonic-style arrival
+
+        # Packet without client_rtt_ms and an implausible sender timestamp
+        monitor.record_packet(
+            PacketIn(session_id="clock_mismatch", sequence_number=1, sender_timestamp=0.0, payload_size=100),
+            t_arrival,
+        )
+        assert monitor.latencies_ms == []
+
+        # Plausible one-way delta is accepted
+        monitor.record_packet(
+            PacketIn(session_id="clock_mismatch", sequence_number=2, sender_timestamp=t_arrival + 1.0 - 0.02, payload_size=100),
+            t_arrival + 1.0,
+        )
+        assert monitor.latencies_ms == [pytest.approx(20.0)]
+
+        # Negative deltas (future timestamps) are rejected too
+        monitor.record_packet(
+            PacketIn(session_id="clock_mismatch", sequence_number=3, sender_timestamp=t_arrival + 5.0, payload_size=100),
+            t_arrival + 1.5,
+        )
+        assert len(monitor.latencies_ms) == 1
+
+        # Explicit client RTT always wins the preference and is never filtered out
+        monitor.record_packet(
+            PacketIn(session_id="clock_mismatch", sequence_number=4, sender_timestamp=0.0,
+                     payload_size=100, client_rtt_ms=7.5),
+            t_arrival + 1.6,
+        )
+        assert monitor.latencies_ms[-1] == pytest.approx(7.5)
+
     def test_interruption_and_recovery_flow(self):
         monitor = SessionMonitor(session_id="pause_sess", timeout_seconds=1.0)
         t0 = 1000.0
@@ -143,20 +178,31 @@ class TestSessionMonitor:
         assert monitor.status == CommunicationStatus.INTERRUPTED
         assert monitor.health_score <= 25.0
 
-        # Packet 2 arrives at t=1003.0 (resumes after 3.0s pause -> transitions to RECOVERING)
+        # Packets 2-3 arrive (corrected report fix #10: recovery needs 3 consecutive
+        # packets) -> still INTERRUPTED until confirmation completes
+        for offset, seq in ((3.0, 2), (3.25, 3)):
+            ack, evts = monitor.record_packet(
+                PacketIn(session_id="pause_sess", sequence_number=seq, sender_timestamp=t0 + offset, payload_size=1000),
+                t0 + offset,
+            )
+            assert monitor.status == CommunicationStatus.INTERRUPTED
+            assert monitor.recovery_detector.recovery_count == 0
+
+        # Packet 4 confirms recovery -> transitions to RECOVERING
         ack, evts = monitor.record_packet(
-            PacketIn(session_id="pause_sess", sequence_number=2, sender_timestamp=t0 + 3.0, payload_size=1000),
-            t0 + 3.0,
+            PacketIn(session_id="pause_sess", sequence_number=4, sender_timestamp=t0 + 3.5, payload_size=1000),
+            t0 + 3.5,
         )
         assert monitor.status == CommunicationStatus.RECOVERING
         assert monitor.interruption_detector.interruption_counter == 1
         assert monitor.recovery_detector.recovery_count == 1
+        # Interruption is capped at the FIRST resuming packet (t0 + 3.0)
         assert monitor.interruption_detector.total_interruption_duration_ms == 3000.0
 
-        # Packet 3 arrives at t=1003.25 (link stabilized -> transitions to CONNECTED)
+        # Packet 5 arrives (link stabilized -> transitions to CONNECTED)
         ack, evts = monitor.record_packet(
-            PacketIn(session_id="pause_sess", sequence_number=3, sender_timestamp=t0 + 3.25, payload_size=1000),
-            t0 + 3.25,
+            PacketIn(session_id="pause_sess", sequence_number=5, sender_timestamp=t0 + 3.75, payload_size=1000),
+            t0 + 3.75,
         )
         assert monitor.status == CommunicationStatus.CONNECTED
 

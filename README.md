@@ -1,6 +1,10 @@
 # SpectrumSentry AI
 
-> AI-Based Wireless Communication Monitoring, Signal Analysis, Modulation Classification, Experiment History, and Anomaly Detection Platform.
+> AI-Based Wireless Communication Monitoring platform: real device link telemetry, modulation
+> classification (BPSK / QPSK / 16-QAM) with an SNR-aware novelty detector flagging unsupported
+> signals as REVIEW, a deterministic cross-domain decision engine, and reproducible experiment
+> tracking. (Novel signals surface as REVIEW "unsupported signature" — full multi-class anomaly
+> recognition is out of scope for the current milestone.)
 
 ---
 

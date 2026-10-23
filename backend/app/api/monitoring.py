@@ -17,6 +17,8 @@ from backend.app.schemas.monitoring import (
     MonitoringSessionStopRequest,
     MonitoringSessionSummary,
     SignalEvidenceInput,
+    SignalSimulateRequest,
+    SignalSimulateResult,
     UnifiedMonitoringSnapshot,
 )
 
@@ -120,6 +122,93 @@ async def update_signal_evidence(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to update signal evidence: {str(exc)}",
+        ) from exc
+
+
+@router.post(
+    "/signal/simulate",
+    response_model=SignalSimulateResult,
+    status_code=status.HTTP_200_OK,
+    summary="Simulate a physical signal and run the real AI classifier",
+    description=(
+        "Generates a synthetic modulated signal at the requested SNR, applies AWGN, extracts "
+        "the 23-feature DSP vector, and runs the trained modulation classifier plus novelty "
+        "detector on it. The resulting evidence replaces the current signal state and is "
+        "broadcast to WebSocket subscribers."
+    ),
+)
+async def simulate_signal(
+    request: SignalSimulateRequest,
+    db: Session = Depends(get_db),
+) -> SignalSimulateResult:
+    """Generate a synthetic signal, classify it through the real MLP pipeline, and ingest the evidence."""
+    try:
+        from math import isfinite
+
+        import numpy as np
+
+        from backend.app.signal_processing.features import extract_features
+        from backend.app.signal_processing.generator import run_signal_experiment
+        from backend.app.signal_processing.modulation import normalize_modulation_name
+
+        experiment = run_signal_experiment(
+            modulation=request.modulation,
+            sample_count=request.sample_count,
+            snr_db=request.snr_db,
+            seed=request.seed,
+        )
+        features_vector, _feature_dict = extract_features(
+            experiment.noisy_signal, sample_rate=experiment.sample_rate
+        )
+        noise_power = (
+            float(np.mean(np.abs(experiment.noise) ** 2))
+            if experiment.noise is not None and np.isfinite(np.mean(np.abs(experiment.noise) ** 2))
+            else None
+        )
+
+        evidence = SignalEvidenceInput(
+            features=[float(f) for f in np.asarray(features_vector, dtype=float)],
+            estimated_snr_db=experiment.measured_snr_db,
+            signal_power=float(experiment.signal_power),
+            noise_power=noise_power,
+            extra_data={
+                "simulated": True,
+                "requested_modulation": experiment.modulation,
+                "requested_snr_db": request.snr_db,
+                "sample_count": experiment.sample_count,
+                "noise_type": experiment.noise_type,
+            },
+        )
+        snapshot = unified_monitor.update_signal_evidence(evidence, db=db)
+
+        signal = snapshot.signal
+        canonical = normalize_modulation_name(request.modulation)
+        return SignalSimulateResult(
+            requested_modulation=canonical,
+            requested_snr_db=request.snr_db,
+            measured_snr_db=experiment.measured_snr_db,
+            predicted_modulation=signal.predicted_modulation,
+            ai_confidence=signal.ai_confidence,
+            is_outlier=signal.is_outlier,
+            novelty_score=signal.novelty_score,
+            signal_quality=signal.signal_quality,
+            classification_matches=(
+                signal.predicted_modulation is not None
+                and canonical is not None
+                and signal.predicted_modulation.lower() == canonical.lower()
+            ),
+            sample_count=experiment.sample_count,
+            snapshot=snapshot,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Signal simulation failed: {str(exc)}",
         ) from exc
 
 

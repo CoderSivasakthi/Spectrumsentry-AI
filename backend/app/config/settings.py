@@ -33,6 +33,17 @@ class Settings(BaseSettings):
         description="SQLAlchemy database connection string",
     )
 
+    # Phase 4: AI Inference Configuration
+    # Preferred model is the phase-robust cumulant (v2) contract trained by
+    # scripts/train_cumulant_model.py; when its artifact has not been trained yet the
+    # unified monitor falls back to the legacy v1 moment/spectral model.
+    AI_MODEL_PATH: Path = PROJECT_ROOT / "backend" / "models" / "modulation_mlp_v2.joblib"
+    AI_MODEL_FALLBACK_PATH: Path = PROJECT_ROOT / "backend" / "models" / "modulation_mlp_v1.joblib"
+    # Novelty detectors per feature contract; the monitor resolves the right one from
+    # the active model's feature count (fix #8).
+    AI_NOVELTY_DETECTOR_PATH: Path = PROJECT_ROOT / "backend" / "models" / "novelty_detector.joblib"
+    AI_NOVELTY_DETECTOR_CUMULANT_PATH: Path = PROJECT_ROOT / "backend" / "models" / "novelty_detector_cumulant.joblib"
+
     # Phase 5: Communication Monitoring Configuration
     COMMUNICATION_PACKET_INTERVAL: float = 0.25
     COMMUNICATION_TIMEOUT: float = 2.0
@@ -41,6 +52,12 @@ class Settings(BaseSettings):
     COMMUNICATION_LATENCY_WARNING_MS: float = 100.0
     COMMUNICATION_PACKET_LOSS_WARNING_PERCENT: float = 5.0
     COMMUNICATION_JITTER_WARNING_MS: float = 30.0
+    # Corrected report fix #10: recovery requires N consecutive packets
+    COMMUNICATION_RECOVERY_CONFIRMATION_PACKETS: int = 3
+    # Corrected report issue #9: one-way fallback latency is only trusted when the
+    # sender timestamp is plausibly from the same clock epoch, i.e. the one-way
+    # delta cannot exceed this many seconds (guards cross-clock garbage values).
+    COMMUNICATION_LATENCY_FALLBACK_MAX_SECONDS: float = 30.0
 
     # Phase 6: Decision Engine Configuration
     DECISION_CONFIDENCE_THRESHOLD: float = 0.70
@@ -51,6 +68,13 @@ class Settings(BaseSettings):
 
     # Phase 7: Real-time Integration Configuration
     MAX_SIGNAL_EVIDENCE_AGE_SECONDS: float = 30.0
+
+    # Continuous signal pipeline: while a monitoring session is active the backend
+    # refreshes synthetic-channel evidence and re-runs the AI classifier on this
+    # cadence so the live monitor's physical-layer card stays fresh (30 s expiry
+    # would otherwise blank it between manual ingests).
+    SIGNAL_EVIDENCE_AUTO_SIMULATE: bool = True
+    SIGNAL_EVIDENCE_INTERVAL_SECONDS: float = 5.0
 
 
     # CORS Configuration

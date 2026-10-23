@@ -33,6 +33,7 @@ class SignalEvidence(BaseModel):
     signal_power: Optional[float] = Field(default=None, description="Estimated baseband signal power")
     noise_power: Optional[float] = Field(default=None, description="Estimated channel noise power")
     signal_quality: Optional[str] = Field(default=None, description="Qualitative signal tier: EXCELLENT, GOOD, FAIR, POOR")
+    is_outlier: Optional[bool] = Field(default=None, description="Novelty-detector flag: signal signature does not match any supported modulation")
 
 
 class CommunicationEvidence(BaseModel):
@@ -48,6 +49,7 @@ class CommunicationEvidence(BaseModel):
     interruption_count: Optional[int] = Field(default=0, ge=0, description="Number of interruptions observed")
     is_interrupted: Optional[bool] = Field(default=False, description="Flag indicating active silence timeout")
     recovery_count: Optional[int] = Field(default=0, ge=0, description="Number of recovery events observed")
+    packets_received: Optional[int] = Field(default=None, ge=0, description="Packets received so far in the session; None when unknown")
 
 
 class DecisionInput(BaseModel):

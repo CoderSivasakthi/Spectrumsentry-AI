@@ -15,6 +15,8 @@ from backend.app.ml.dataset import INVERSE_LABEL_MAP, LABEL_MAP
 from backend.app.ml.trainer import load_trained_model
 from backend.app.signal_processing import FEATURE_COUNT, FEATURE_NAMES
 
+from .anomaly import DEFAULT_NOVELTY_DETECTOR_PATH, novelty_check
+
 DEFAULT_MODEL_PATH = Path("backend/models/modulation_mlp_v1.joblib")
 DEFAULT_METADATA_PATH = Path("backend/models/model_metadata.json")
 
@@ -32,6 +34,7 @@ class ModulationPredictor:
         self.pipeline: Optional[Pipeline] = None
         self.metadata: Dict[str, Any] = {}
         self.model_version: str = "v1.0"
+        self.novelty_detector_path: Path = DEFAULT_NOVELTY_DETECTOR_PATH
 
         # Load model pipeline on initialization if file exists
         if self.model_path.exists():
@@ -48,30 +51,52 @@ class ModulationPredictor:
             except Exception:
                 self.metadata = {}
 
+    def _expected_feature_count(self) -> int:
+        """Infer the feature dimension the loaded pipeline was trained on.
+
+        Reads ``n_features_in_`` from the fitted scaler so both the legacy 23-feature
+        (v1) and phase-robust 6-feature cumulant (v2) contracts are supported by the
+        same predictor instance. Falls back to the legacy contract if unavailable.
+        """
+        if self.pipeline is not None:
+            try:
+                scaler = self.pipeline.named_steps.get("scaler")
+                n = getattr(scaler, "n_features_in_", None)
+                if n:
+                    return int(n)
+            except Exception:
+                pass
+        return FEATURE_COUNT
+
+    def expected_feature_count(self) -> int:
+        """Public accessor for the loaded model's feature-contract dimension."""
+        return self._expected_feature_count()
+
     def _validate_input_features(self, X: np.ndarray) -> np.ndarray:
         """Validate feature matrix dimensions and numerical integrity.
-        
+
         Args:
             X: Array of features.
 
         Returns:
-            Validated 2D float32 array of shape (N, 23).
+            Validated 2D float32 array of shape (N, expected_feature_count).
 
         Raises:
             ValueError: If array dimensions, feature count, or values are invalid.
         """
+        expected = self._expected_feature_count()
         arr = np.asarray(X, dtype=np.float32)
 
         if arr.ndim == 1:
-            if arr.shape[0] != FEATURE_COUNT:
+            if arr.shape[0] != expected:
                 raise ValueError(
-                    f"Expected single feature vector of length {FEATURE_COUNT}, got {arr.shape[0]}"
+                    f"Expected single feature vector of length {expected}, got {arr.shape[0]}"
                 )
             arr = arr.reshape(1, -1)
         elif arr.ndim == 2:
-            if arr.shape[1] != FEATURE_COUNT:
+            if arr.shape[1] != expected:
                 raise ValueError(
-                    f"Expected feature matrix with {FEATURE_COUNT} columns, got {arr.shape[1]}"
+                    f"Expected feature matrix with {expected} columns, got {arr.shape[1]}"
                 )
         else:
             raise ValueError(f"Feature array must be 1D or 2D, got dimension {arr.ndim}")
@@ -85,10 +110,11 @@ class ModulationPredictor:
         return arr
 
     def predict_single(self, feature_vector: np.ndarray) -> Dict[str, Any]:
-        """Perform classification inference on a single 23-feature vector.
-        
+        """Perform classification inference on a single feature vector.
+
         Args:
-            feature_vector: 1D array of shape (23,) or 2D array of shape (1, 23).
+            feature_vector: 1D array matching the loaded model's feature contract
+                (23 for legacy v1, 6 for the phase-robust cumulant v2).
 
         Returns:
             Structured prediction dictionary containing:
@@ -124,13 +150,32 @@ class ModulationPredictor:
             "class_probabilities": class_probabilities,
             "inference_time_ms": round(latency_ms, 3),
             "model_version": self.model_version,
+            **self._novelty_fields(X_valid),
         }
+
+    def _novelty_fields(self, X_valid: np.ndarray) -> Dict[str, Any]:
+        """Attach is_outlier / novelty_score fields when a trained detector exists.
+
+        Never raises: if the detector is absent, malformed, or incompatible with the
+        feature vector, the fields are simply omitted (novelty monitoring stays absent).
+        """
+        try:
+            result = novelty_check(X_valid[0], detector_path=self.novelty_detector_path)
+            if result is None:
+                return {}
+            return {
+                "is_outlier": result["is_outlier"],
+                "novelty_score": result["novelty_score"],
+                "novelty_detector_metadata": result["detector_metadata"],
+            }
+        except Exception:
+            return {}
 
     def predict_batch(self, feature_matrix: np.ndarray) -> List[Dict[str, Any]]:
         """Perform batch classification inference.
-        
+
         Args:
-            feature_matrix: 2D array of shape (N, 23).
+            feature_matrix: 2D array matching the loaded model's feature contract.
 
         Returns:
             List of prediction dictionaries for each input sample.
@@ -163,6 +208,7 @@ class ModulationPredictor:
                 "class_probabilities": class_probs,
                 "inference_time_ms": round(avg_latency_ms, 3),
                 "model_version": self.model_version,
+                **self._novelty_fields(X_valid[i : i + 1]),
             })
 
         return results
@@ -187,8 +233,9 @@ class ModulationPredictor:
             raise RuntimeError("Model pipeline is not loaded. Call load() before benchmarking.")
 
         rng = np.random.default_rng(42)
-        single_x = rng.standard_normal((1, FEATURE_COUNT), dtype=np.float32)
-        batch_x = rng.standard_normal((batch_size, FEATURE_COUNT), dtype=np.float32)
+        expected_count = self._expected_feature_count()
+        single_x = rng.standard_normal((1, expected_count), dtype=np.float32)
+        batch_x = rng.standard_normal((batch_size, expected_count), dtype=np.float32)
 
         # Warmup
         for _ in range(10):

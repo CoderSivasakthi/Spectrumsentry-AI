@@ -129,7 +129,7 @@ describe('Phase 8 Dashboard Test Suite', () => {
       React.createElement(LoadingState, { message: 'Loading telemetry and evidence...' })
     );
     assert.ok(html.includes('Loading telemetry and evidence...'), 'Must render loading message');
-    assert.ok(html.includes('animate-spin'), 'Must include animated spinner');
+    assert.ok(html.includes('spinner'), 'Must include animated spinner');
   });
 
   // Test 3: Backend error state
@@ -481,7 +481,6 @@ describe('Phase 8 Dashboard Test Suite', () => {
     const ctx = createMockContext();
     const html = renderWithContext(React.createElement(Dashboard), ctx);
     // Responsive grid layout checks
-    assert.ok(html.includes('grid-cols-1'), 'Must support mobile single column');
-    assert.ok(html.includes('lg:grid-cols-2'), 'Must support desktop 2-column grid');
+    assert.ok(html.includes('dash-grid'), 'Must support responsive dashboard grid');
   });
 });

@@ -6,139 +6,171 @@ import {
   Code,
 } from 'lucide-react';
 
+/* Pipeline descriptions grouped by engineering domain instead of
+   build-phase numbering — the number added nothing for the reader. */
+const PIPELINE: Array<{ title: string; body: string; tone?: 'ok' }> = [
+  {
+    title: 'Platform',
+    body: 'FastAPI backend, React frontend, SQLite persistence, and WebSocket infrastructure.',
+  },
+  {
+    title: 'Signal processing',
+    body: 'Complex baseband I/Q synthesis (BPSK, QPSK, 16-QAM), AWGN channel, and 23-feature extraction.',
+  },
+  {
+    title: 'Dataset generation',
+    body: 'Balanced dataset (39,000 synthetic samples across 78 SNR conditions, 80/20 train/test split).',
+  },
+  {
+    title: 'AI modulation classifier',
+    body: 'StandardScaler + MLPClassifier pipeline delivering >97% test accuracy and low-latency inference.',
+  },
+  {
+    title: 'Communication monitoring',
+    body: 'Real-time packet loss tracking, RTT latency, jitter, throughput, timeout-based interruption, and recovery.',
+  },
+  {
+    title: 'Decision engine',
+    body: 'Deterministic explainable correlation engine evaluating cross-domain consistency and generating alerts.',
+  },
+  {
+    title: 'Real-time integration',
+    body: 'Unified evidence aggregation, signal freshness guard, and /ws/monitoring snapshot streaming.',
+  },
+  {
+    title: 'Operator dashboard',
+    body: 'Live multi-domain telemetry cards, real-time charts, event timeline, and session history.',
+    tone: 'ok',
+  },
+];
+
+const TECH_STACK: Array<{ name: string; role: string }> = [
+  { name: 'Python 3.12', role: 'Backend runtime' },
+  { name: 'FastAPI', role: 'REST & WebSockets' },
+  { name: 'React 18 & TS', role: 'UI & dashboard' },
+  { name: 'Custom CSS design system', role: 'Styling system' },
+  { name: 'NumPy & SciPy', role: 'DSP computations' },
+  { name: 'scikit-learn', role: 'MLP & scaler' },
+  { name: 'SQLite', role: 'Local database' },
+  { name: 'Pytest', role: '212 automated tests' },
+];
+
 export const SystemAbout: React.FC = () => {
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="stack" style={{ maxWidth: 920 }}>
       {/* Title */}
-      <div className="text-center sm:text-left">
-        <h2 className="text-2xl font-extrabold text-white tracking-tight flex items-center justify-center sm:justify-start gap-2.5">
-          <Shield className="w-6 h-6 text-sky-400" />
-          <span>SpectrumSentry AI System Architecture</span>
+      <div>
+        <h2
+          className="row"
+          style={{ fontSize: 'var(--text-2xl)', fontWeight: 600, color: 'var(--text-1)', gap: 'var(--space-2)' }}
+        >
+          <Shield size={22} style={{ color: 'var(--accent)' }} />
+          <span>SpectrumSentry AI system architecture</span>
         </h2>
-        <p className="text-sm text-slate-400 mt-1">
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-3)', marginTop: 'var(--space-1)' }}>
           AI-driven wireless communication monitoring, signal quality analysis, and deterministic decision correlation.
         </p>
       </div>
 
-      {/* Overview Card */}
-      <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
-        <h3 className="text-base font-bold text-white tracking-wide flex items-center gap-2">
-          <Activity className="w-4 h-4 text-sky-400" />
-          <span>Platform Overview</span>
+      {/* Overview */}
+      <section className="card">
+        <h3 className="card__title row" style={{ gap: 'var(--space-2)' }}>
+          <Activity size={16} style={{ color: 'var(--accent)' }} />
+          <span>Platform overview</span>
         </h3>
-        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-          SpectrumSentry AI combines physical-layer Digital Signal Processing (DSP) and Machine Learning modulation classification
-          with application-layer network packet telemetry to evaluate communication link integrity in real time.
-          The platform operates completely offline without external cloud dependencies.
+        <p className="card__body" style={{ marginTop: 0, fontSize: 'var(--text-sm)', color: 'var(--text-2)', lineHeight: 1.6 }}>
+          SpectrumSentry AI combines physical-layer Digital Signal Processing (DSP) and Machine Learning modulation
+          classification with application-layer network packet telemetry to evaluate communication link integrity in
+          real time. The platform operates completely offline without external cloud dependencies.
         </p>
-      </div>
+      </section>
 
-      {/* 8-Phase Engineering Pipeline */}
-      <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
-        <h3 className="text-base font-bold text-white tracking-wide flex items-center gap-2">
-          <Layers className="w-4 h-4 text-sky-400" />
-          <span>End-to-End Pipeline</span>
+      {/* Pipeline */}
+      <section className="card">
+        <h3 className="card__title row" style={{ gap: 'var(--space-2)' }}>
+          <Layers size={16} style={{ color: 'var(--accent)' }} />
+          <span>End-to-end pipeline</span>
         </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
-          <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
-            <span className="text-sky-400 font-bold block mb-1">Phase 1 • Foundation</span>
-            <span className="text-slate-400">FastAPI backend, React frontend, SQLite persistence, and WebSocket infrastructure.</span>
-          </div>
-
-          <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
-            <span className="text-sky-400 font-bold block mb-1">Phase 2 • Signal Processing</span>
-            <span className="text-slate-400">Complex baseband I/Q synthesis (BPSK, QPSK, 16-QAM), AWGN channel, and 23-feature extraction.</span>
-          </div>
-
-          <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
-            <span className="text-sky-400 font-bold block mb-1">Phase 3 • Dataset Generation</span>
-            <span className="text-slate-400">Balanced dataset (39,000 synthetic samples across 78 SNR conditions, 80/20 train/test split).</span>
-          </div>
-
-          <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
-            <span className="text-sky-400 font-bold block mb-1">Phase 4 • AI Modulation Classifier</span>
-            <span className="text-slate-400">Production StandardScaler + MLPClassifier pipeline delivering &gt;97% test accuracy and low-latency inference.</span>
-          </div>
-
-          <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
-            <span className="text-sky-400 font-bold block mb-1">Phase 5 • Communication Monitoring</span>
-            <span className="text-slate-400">Real-time packet loss tracking, RTT latency, jitter, throughput, timeout-based interruption, and recovery.</span>
-          </div>
-
-          <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
-            <span className="text-sky-400 font-bold block mb-1">Phase 6 • Decision Engine</span>
-            <span className="text-slate-400">Deterministic explainable correlation engine evaluating cross-domain consistency and generating alerts.</span>
-          </div>
-
-          <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
-            <span className="text-sky-400 font-bold block mb-1">Phase 7 • Real-Time Integration</span>
-            <span className="text-slate-400">Unified evidence aggregation, signal freshness guard, and `/ws/monitoring` snapshot streaming.</span>
-          </div>
-
-          <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/30">
-            <span className="text-emerald-400 font-bold block mb-1">Phase 8 • Professional Dashboard</span>
-            <span className="text-slate-300">Live multi-domain telemetry cards, real-time charts, event timeline, and session history.</span>
-          </div>
+        <div
+          className="card__body"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr',
+            gap: 'var(--space-3)',
+          }}
+        >
+          {PIPELINE.map((item) => (
+            <div key={item.title} className="card--inset" style={item.tone === 'ok' ? borderOkStyle : undefined}>
+              <span
+                style={{
+                  display: 'block',
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 600,
+                  color: item.tone === 'ok' ? 'var(--ok-fg)' : 'var(--accent)',
+                  marginBottom: 'var(--space-1)',
+                }}
+              >
+                {item.title}
+              </span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-3)', lineHeight: 1.55 }}>
+                {item.body}
+              </span>
+            </div>
+          ))}
         </div>
-      </div>
+      </section>
 
-      {/* Technology Stack */}
-      <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
-        <h3 className="text-base font-bold text-white tracking-wide flex items-center gap-2">
-          <Code className="w-4 h-4 text-sky-400" />
-          <span>Core Technologies</span>
+      {/* Technology stack */}
+      <section className="card">
+        <h3 className="card__title row" style={{ gap: 'var(--space-2)' }}>
+          <Code size={16} style={{ color: 'var(--accent)' }} />
+          <span>Core technologies</span>
         </h3>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono text-slate-300">
-          <div className="p-3 rounded-xl bg-slate-900/40 border border-slate-800">
-            <span className="text-white font-bold block">Python 3.12</span>
-            <span className="text-slate-500 text-[11px]">Backend Runtime</span>
-          </div>
-          <div className="p-3 rounded-xl bg-slate-900/40 border border-slate-800">
-            <span className="text-white font-bold block">FastAPI</span>
-            <span className="text-slate-500 text-[11px]">REST & WebSockets</span>
-          </div>
-          <div className="p-3 rounded-xl bg-slate-900/40 border border-slate-800">
-            <span className="text-white font-bold block">React 18 & TS</span>
-            <span className="text-slate-500 text-[11px]">UI & Dashboard</span>
-          </div>
-          <div className="p-3 rounded-xl bg-slate-900/40 border border-slate-800">
-            <span className="text-white font-bold block">Tailwind CSS</span>
-            <span className="text-slate-500 text-[11px]">Styling System</span>
-          </div>
-          <div className="p-3 rounded-xl bg-slate-900/40 border border-slate-800">
-            <span className="text-white font-bold block">NumPy & SciPy</span>
-            <span className="text-slate-500 text-[11px]">DSP Computations</span>
-          </div>
-          <div className="p-3 rounded-xl bg-slate-900/40 border border-slate-800">
-            <span className="text-white font-bold block">scikit-learn</span>
-            <span className="text-slate-500 text-[11px]">MLP & Scaler</span>
-          </div>
-          <div className="p-3 rounded-xl bg-slate-900/40 border border-slate-800">
-            <span className="text-white font-bold block">SQLite</span>
-            <span className="text-slate-500 text-[11px]">Local Database</span>
-          </div>
-          <div className="p-3 rounded-xl bg-slate-900/40 border border-slate-800">
-            <span className="text-white font-bold block">Pytest</span>
-            <span className="text-slate-500 text-[11px]">139 Automated Tests</span>
-          </div>
+        <div
+          className="card__body"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: 'var(--space-3)',
+          }}
+        >
+          {TECH_STACK.map((t) => (
+            <div key={t.name} className="metric">
+              <span style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-1)' }}>
+                {t.name}
+              </span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-3)' }}>{t.role}</span>
+            </div>
+          ))}
         </div>
-      </div>
+      </section>
 
-      {/* Defensive Research Scope & Hardware Boundary Disclaimer */}
-      <div className="p-5 rounded-2xl border border-sky-500/30 bg-sky-950/20 text-slate-300 space-y-2">
-        <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-sky-400">
-          <Shield className="w-4 h-4 text-sky-400" />
-          <span>Operational Boundary & Research Notice</span>
+      {/* Scope notice */}
+      <section
+        style={{
+          padding: 'var(--space-4) var(--space-5)',
+          border: '1px solid var(--accent-border)',
+          background: 'var(--accent-bg)',
+          borderRadius: 'var(--radius-lg)',
+        }}
+      >
+        <div className="row" style={{ gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+          <Shield size={15} style={{ color: 'var(--accent)' }} />
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--accent)' }}>
+            Operational boundary &amp; research notice
+          </span>
         </div>
-        <p className="text-xs leading-relaxed text-slate-300">
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-2)', lineHeight: 1.6 }}>
           SpectrumSentry AI is designed exclusively for defensive research and educational demonstration.
           The communication monitoring subsystem functions via controlled application-level network telemetry
-          (sequence-tracked ping-ack packets). It does not perform physical raw RF spectrum interception, packet sniffing,
-          or active radio transmission without dedicated Software Defined Radio (SDR) hardware.
+          (sequence-tracked ping-ack packets). It does not perform physical raw RF spectrum interception,
+          packet sniffing, or active radio transmission without dedicated Software Defined Radio (SDR) hardware.
         </p>
-      </div>
+      </section>
     </div>
   );
+};
+
+const borderOkStyle: React.CSSProperties = {
+  borderColor: 'var(--ok-border)',
 };
