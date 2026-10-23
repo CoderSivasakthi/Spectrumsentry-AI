@@ -4,7 +4,7 @@
     "experiment_name": "signal_dsp_calibration",
     "description": "Verification of synthetic modulation generation, AWGN SNR calibration, and feature stability.",
     "random_seed": 99,
-    "timestamp": "2026-10-23T07:34:07.830665+00:00",
+    "timestamp": "2026-10-23T20:58:25.081579+00:00",
     "dataset_version": "v1.0",
     "model_version": "v1.0",
     "model_path": "E:\\SpectrumSentry AI\\backend\\models\\modulation_mlp_v1.joblib",
@@ -37,7 +37,7 @@
       "scipy_version": "1.18.1",
       "sklearn_version": "1.9.1",
       "matplotlib_version": "3.11.2",
-      "pid": 20240
+      "pid": 9240
     }
   },
   "modulation_generation": {
