@@ -938,16 +938,36 @@ class UnifiedMonitoringManager:
                 ip=(device_entry.get("ips") or [None])[0] if device_entry else None,
             )
 
-        snapshot = UnifiedMonitoringSnapshot(
-            monitoring_session_id=(
+        # When a device_id is requested but that device is not (yet) registered — e.g.
+        # the frontend's initial REST status race, before its WS handshake has been
+        # accepted by on_device_connected — return an honest null rather than borrowing
+        # *another* device's active_* / packet_monitor.active_session_id pointer.
+        # Posting test packets against a foreign session is exactly what made the
+        # transmitter appear stuck on the wrong device's link.
+        if device_id and not device_entry:
+            device_comm_id = None
+        elif device_id and device_entry:
+            device_comm_id = device_entry.get("communication_session_id")
+        else:
+            device_comm_id = self.active_communication_session_id or packet_monitor.active_session_id
+
+        # A named device that isn't registered yet must not see another device's
+        # session id either (same foreign-leak guard as communication_session_id
+        # above); only the legacy global (device_id is None) path falls back to
+        # the shared active pointers.
+        if device_id and not device_entry:
+            device_mon_id = None
+        else:
+            device_mon_id = (
                 device_entry.get("monitoring_session_id")
                 if device_entry
                 else self.active_monitoring_session_id
-            ),
+            )
+
+        snapshot = UnifiedMonitoringSnapshot(
+            monitoring_session_id=device_mon_id,
             communication_session_id=(
-                target_comm_id
-                or self.active_communication_session_id
-                or packet_monitor.active_session_id
+                target_comm_id or device_comm_id
             ),
             timestamp=now,
             device=device_snapshot,

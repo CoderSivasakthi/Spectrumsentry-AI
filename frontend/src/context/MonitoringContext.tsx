@@ -54,6 +54,9 @@ export interface MonitoringContextValue {
   submitSignal: (sigIn: SignalEvidenceInput) => Promise<void>;
   runSignalSimulation: (req: SignalSimulateRequest) => Promise<SignalSimulateResult | null>;
   refresh: () => Promise<void>;
+  /** Return this device's own communication session id, creating one if the WS
+   * handshake hasn't registered it yet (used by the link-test transmitter). */
+  ensureDeviceSession: () => Promise<string | null>;
 }
 
 const MAX_LIVE_POINTS = 60;
@@ -259,6 +262,38 @@ export const MonitoringProvider: React.FC<{ children: ReactNode }> = ({ children
     refresh();
   }, [refresh]);
 
+  /** Ensure this device owns a live communication session and return its id.
+
+   * The WS handshake normally auto-starts one, but on reload the frontend's
+   * initial REST status can land before that and resolve to no session (or,
+   * before the backend fix, to *another* device's session). The link-test
+   * transmitter calls this so "Start stream" always targets this device.
+   */
+  const ensureDeviceSession = useCallback(async (): Promise<string | null> => {
+    if (snapshot?.communication_session_id) {
+      return snapshot.communication_session_id;
+    }
+    try {
+      setError(null);
+      await startMonitoringSession({
+        auto_start_communication: true,
+        extra_metadata: {
+          device_id: getDeviceId(),
+          device_name: getDeviceName(),
+          source: 'ensure_device_session',
+        },
+      });
+      const fresh = await getMonitoringStatus(undefined, getDeviceId());
+      handleSnapshotUpdate(fresh);
+      return fresh.communication_session_id ?? null;
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : 'Unable to start a session for this device.'
+      );
+      return null;
+    }
+  }, [snapshot, handleSnapshotUpdate]);
+
   const startSession = async (req: MonitoringSessionStartRequest = {}) => {
     try {
       setError(null);
@@ -339,6 +374,7 @@ export const MonitoringProvider: React.FC<{ children: ReactNode }> = ({ children
     submitSignal,
     runSignalSimulation,
     refresh,
+    ensureDeviceSession,
   };
 
   return <MonitoringContext.Provider value={value}>{children}</MonitoringContext.Provider>;

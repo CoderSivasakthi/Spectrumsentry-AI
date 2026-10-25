@@ -10,9 +10,10 @@ import { LINK_PROFILES } from '../../hooks/useLinkTestStream';
  * navigates to another view.
  */
 export const LinkTestCard: React.FC = () => {
-  const { snapshot, linkTest: stream } = useMonitoring();
+  const { snapshot, linkTest: stream, ensureDeviceSession } = useMonitoring();
   const commSessionId = snapshot?.communication_session_id ?? null;
   const [notice, setNotice] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
 
   // A newly created session invalidates a stream aimed at the old session
   useEffect(() => {
@@ -23,10 +24,25 @@ export const LinkTestCard: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [commSessionId]);
 
-  const handleStart = () => {
-    if (!commSessionId) return;
+  const handleStart = async () => {
+    if (stream.running) return;
+    setStarting(true);
+    // The device's session auto-starts on WS connect, but on reload the
+    // frontend's first REST status can land before that and resolve to no
+    // session (or, before the backend fix, to another device's session).
+    // Ensure this device owns its own session before streaming packets into it,
+    // so the transmitter never targets a foreign (or null) session.
+    let sid = commSessionId;
+    if (!sid) {
+      sid = await ensureDeviceSession();
+    }
+    setStarting(false);
+    if (!sid) {
+      setNotice('No active session for this device — the backend may still be starting up.');
+      return;
+    }
     setNotice(null);
-    stream.start(commSessionId);
+    stream.start(sid);
   };
 
   const handleStop = () => {
@@ -78,13 +94,13 @@ export const LinkTestCard: React.FC = () => {
               <span>Stop stream</span>
             </button>
           ) : (
-            <button className="btn btn--primary" onClick={handleStart} disabled={!commSessionId}>
+            <button className="btn btn--primary" onClick={handleStart} disabled={starting}>
               <Play size={13} />
               <span>Start stream</span>
             </button>
           )}
           <span className="num" style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-3)' }}>
-            {stream.running ? 'Streaming…' : busy}
+            {starting ? 'Acquiring device session…' : stream.running ? 'Streaming…' : busy}
           </span>
         </div>
 

@@ -111,6 +111,7 @@ function createMockContext(overrides?: Partial<MonitoringContextValue>): Monitor
     submitSignal: async () => {},
     runSignalSimulation: async () => null,
     refresh: async () => {},
+    ensureDeviceSession: async () => null,
     ...overrides,
   };
 }

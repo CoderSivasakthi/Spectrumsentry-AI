@@ -189,6 +189,32 @@ class TestDeviceSessionIsolation:
         assert roster.total == 0
         assert [d.device_id for d in roster.devices] == []
 
+    def test_unregistered_device_does_not_inherit_foreign_session(self, db):
+        """A named-but-unregistered device must not borrow another device's session.
+
+        Regression: get_current_snapshot(device_id=...) used to fall back to
+        the global active_* pointers, which could return a *different* device's
+        communication session id and make the transmitter target the wrong link.
+        """
+        # Register device_a so there is an active session pointer it could leak.
+        unified_monitor.start_session(
+            MonitoringSessionStartRequest(
+                monitoring_session_id="foreign_mon", auto_start_communication=True
+            ),
+            db,
+            device_id="device_a",
+        )
+        other_comm = unified_monitor.device_sessions["device_a"]["communication_session_id"]
+
+        snap = unified_monitor.get_current_snapshot(db, device_id="not_registered")
+        assert snap.communication_session_id is None
+        assert snap.monitoring_session_id is None
+        # Must not leak device_a's session id
+        assert snap.communication_session_id != other_comm
+        # The registered device still resolves to its own session
+        own = unified_monitor.get_current_snapshot(db, device_id="device_a")
+        assert own.communication_session_id == other_comm
+
 
 class TestTargetedBroadcasts:
     def test_broadcast_targets_only_one_device(self):
