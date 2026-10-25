@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import {
   ChartDataPoint,
+  DeviceRosterResponse,
   MonitoringSessionStartRequest,
   SignalEvidenceInput,
   SignalSimulateRequest,
@@ -19,6 +20,7 @@ import {
   WebSocketMessage,
 } from '../types/monitoring';
 import {
+  getDevices,
   getMonitoringStatus,
   simulateSignal,
   startMonitoringSession,
@@ -26,10 +28,11 @@ import {
   updateSignalEvidence,
 } from '../api/monitoring';
 import { checkBackendHealth } from '../api/client';
+import { getDeviceId, getDeviceName } from '../lib/deviceIdentity';
 import { useMonitoringWebSocket } from '../hooks/useMonitoringWebSocket';
 import { useLinkTestStream, LinkTestStream } from '../hooks/useLinkTestStream';
 
-export type NavigationTab = 'live' | 'link' | 'signal' | 'sessions' | 'system';
+export type NavigationTab = 'live' | 'link' | 'devices' | 'signal' | 'sessions' | 'system';
 
 export interface MonitoringContextValue {
   snapshot: UnifiedMonitoringSnapshot | null;
@@ -42,6 +45,10 @@ export interface MonitoringContextValue {
   activeTab: NavigationTab;
   setActiveTab: (tab: NavigationTab) => void;
   linkTest: LinkTestStream;
+  deviceRoster: DeviceRosterResponse | null;
+  refreshDevices: () => Promise<void>;
+  deviceId: string;
+  deviceName: string;
   startSession: (req?: MonitoringSessionStartRequest) => Promise<void>;
   stopSession: (reason?: string) => Promise<void>;
   submitSignal: (sigIn: SignalEvidenceInput) => Promise<void>;
@@ -62,10 +69,13 @@ export const MonitoringProvider: React.FC<{ children: ReactNode }> = ({ children
   const [liveHistory, setLiveHistory] = useState<ChartDataPoint[]>([]);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [activeTab, setActiveTab] = useState<NavigationTab>('live');
+  const [deviceRoster, setDeviceRoster] = useState<DeviceRosterResponse | null>(null);
 
   const prevStatusRef = useRef<string | null>(null);
   const prevCommStatusRef = useRef<string | null>(null);
   const prevSessionRef = useRef<string | null>(null);
+  // Late-bound so the WS event handler can trigger roster refreshes (defined below)
+  const refreshDevicesRef = useRef<(() => Promise<void>) | null>(null);
 
   const addTimelineEvent = useCallback((event: Omit<TimelineEvent, 'id'>) => {
     const newEvent: TimelineEvent = {
@@ -160,6 +170,16 @@ export const MonitoringProvider: React.FC<{ children: ReactNode }> = ({ children
     [addTimelineEvent]
   );
 
+  // Device roster (connected devices + per-device link stats for the Devices panel)
+  const refreshDevices = useCallback(async () => {
+    try {
+      const roster = await getDevices();
+      setDeviceRoster(roster);
+    } catch (err: unknown) {
+      console.warn('Device roster fetch failed:', err);
+    }
+  }, []);
+
   const handleWebSocketEvent = useCallback(
     (msg: WebSocketMessage) => {
       const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour12: false });
@@ -170,13 +190,17 @@ export const MonitoringProvider: React.FC<{ children: ReactNode }> = ({ children
           title: 'Monitoring session initiated',
           category: 'SESSION',
         });
+        refreshDevicesRef.current?.();
       } else if (msg.type === 'session_stopped') {
+        refreshDevicesRef.current?.();
         addTimelineEvent({
           timestamp: timeStr,
           type: 'warning',
           title: 'Monitoring session stopped',
           category: 'SESSION',
         });
+      } else if (msg.type === 'devices_changed') {
+        refreshDevicesRef.current?.();
       } else if (msg.type === 'signal_update') {
         addTimelineEvent({
           timestamp: timeStr,
@@ -189,6 +213,11 @@ export const MonitoringProvider: React.FC<{ children: ReactNode }> = ({ children
     [addTimelineEvent]
   );
 
+  // Keep the roster fresh when devices join or leave
+  useEffect(() => {
+    refreshDevices();
+  }, [refreshDevices]);
+
   // Hook WebSocket
   const { connectionStatus, reconnect } = useMonitoringWebSocket({
     enabled: true,
@@ -199,6 +228,8 @@ export const MonitoringProvider: React.FC<{ children: ReactNode }> = ({ children
   // Packet transmitter lives here (not in a view) so the stream survives tab switches
   const linkTest = useLinkTestStream();
 
+  refreshDevicesRef.current = refreshDevices;
+
   // Auto-stop the transmitter when there is no communication session to feed
   const commSessionForStream = snapshot?.communication_session_id ?? null;
   useEffect(() => {
@@ -207,13 +238,13 @@ export const MonitoringProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, [commSessionForStream, linkTest]);
 
-  // REST initial fetch and health check
+  // REST initial fetch and health check (device-scoped: this device's session only)
   const refresh = useCallback(async () => {
     try {
       setError(null);
       await checkBackendHealth();
       setIsBackendHealthy(true);
-      const initialSnapshot = await getMonitoringStatus();
+      const initialSnapshot = await getMonitoringStatus(undefined, getDeviceId());
       handleSnapshotUpdate(initialSnapshot);
     } catch (err: unknown) {
       console.warn('Initial REST monitoring load failed:', err);
@@ -231,19 +262,31 @@ export const MonitoringProvider: React.FC<{ children: ReactNode }> = ({ children
   const startSession = async (req: MonitoringSessionStartRequest = {}) => {
     try {
       setError(null);
-      await startMonitoringSession(req);
+      // Sessions are per-device: tag the start request with this device's identity
+      const deviceReq: MonitoringSessionStartRequest = {
+        ...req,
+        extra_metadata: {
+          device_id: getDeviceId(),
+          device_name: getDeviceName(),
+          source: 'manual_start',
+          ...(req.extra_metadata || {}),
+        },
+      };
+      await startMonitoringSession(deviceReq);
       await refresh();
       reconnect();
+      refreshDevicesRef.current?.();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to start monitoring session.');
       throw err;
     }
   };
 
+  /** Stops only this device's session (sessions are per-device now). */
   const stopSession = async (reason = 'user_requested') => {
     try {
       setError(null);
-      await stopMonitoringSession({ reason });
+      await stopMonitoringSession({ reason, device_id: getDeviceId() });
       await refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to stop monitoring session.');
@@ -287,6 +330,10 @@ export const MonitoringProvider: React.FC<{ children: ReactNode }> = ({ children
     activeTab,
     setActiveTab,
     linkTest,
+    deviceRoster,
+    refreshDevices,
+    deviceId: getDeviceId(),
+    deviceName: getDeviceName(),
     startSession,
     stopSession,
     submitSignal,

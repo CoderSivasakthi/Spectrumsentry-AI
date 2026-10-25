@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getMonitoringHistory, getMonitoringSessionReport } from '../../api/monitoring';
+import {
+  getMonitoringHistory,
+  getMonitoringSessionReport,
+  getMonitoringSessionReportCsvUrl,
+} from '../../api/monitoring';
 import { MonitoringSessionSummary } from '../../types/monitoring';
 import { StatusBadge } from '../common/StatusBadge';
 import { LoadingState, EmptyState } from '../common/States';
@@ -33,62 +37,43 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
-  const escapeCsv = (value: unknown): string => {
-    const text = value === null || value === undefined ? '' : String(value);
-    return `"${text.replace(/"/g, '""')}"`;
-  };
-
-  // Flatten nested report into a two-column CSV: a dotted-path key and its scalar value.
-  const flattenObject = (obj: unknown, prefix = ''): Array<[string, string]> => {
-    const rows: Array<[string, string]> = [];
-    if (obj === null || obj === undefined) {
-      rows.push([prefix || 'root', '']);
-    } else if (Array.isArray(obj)) {
-      if (obj.length === 0) {
-        rows.push([`${prefix} (count)`, '0']);
-      } else {
-        obj.forEach((item, i) => rows.push(...flattenObject(item, `${prefix}.${i}`)));
-      }
-    } else if (typeof obj === 'object') {
-      for (const [k, v] of Object.entries(obj)) {
-        const p = prefix ? `${prefix}.${k}` : k;
-        rows.push(...flattenObject(v, p));
-      }
-    } else {
-      rows.push([prefix, String(obj)]);
+  /** Session id from the device metadata shown in the device chip (when present). */
+  const deviceNameOf = (sess: MonitoringSessionSummary): string | null => {
+    const meta = sess.extra_metadata;
+    if (meta && typeof meta === 'object') {
+      const metaObj = meta as Record<string, unknown>;
+      if (typeof metaObj.device_name === 'string') return metaObj.device_name;
     }
-    return rows;
+    return null;
   };
 
   const handleDownloadReport = async (
     session: MonitoringSessionSummary,
     format: 'json' | 'csv' = 'json'
   ) => {
-    const isCsv = format === 'csv';
-    if (isCsv) {
-      setIsDownloading(true);
-    } else {
-      setIsDownloading(true);
-    }
+    setIsDownloading(true);
     try {
-      const report = await getMonitoringSessionReport(session.monitoring_session_id);
-      const blob = isCsv
-        ? (() => {
-            const rows = flattenObject(report);
-            const csv = ['path,value', ...rows.map(([p, v]) => `${escapeCsv(p)},${escapeCsv(v)}`)].join(
-              '\n'
-            );
-            return new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-          })()
-        : new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${session.monitoring_session_id}_report.${isCsv ? 'csv' : 'json'}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      if (format === 'csv') {
+        // Server-rendered structured CSV (summary/events/decisions/alerts tables) —
+        // opens in Excel as real tables, not a flattened JSON transcript.
+        const a = document.createElement('a');
+        a.href = getMonitoringSessionReportCsvUrl(session.monitoring_session_id);
+        a.download = `${session.monitoring_session_id}_report.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else {
+        const report = await getMonitoringSessionReport(session.monitoring_session_id);
+        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${session.monitoring_session_id}_report.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to download session report.');
     } finally {
@@ -182,6 +167,7 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
               <thead>
                 <tr>
                   <th>Session ID</th>
+                  <th>Device</th>
                   <th>Linked channel</th>
                   <th>Started (UTC)</th>
                   <th>Ended (UTC)</th>
@@ -195,6 +181,9 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
                   <tr key={sess.monitoring_session_id}>
                     <td className="cell-main num" style={{ color: 'var(--accent)' }}>
                       {sess.monitoring_session_id}
+                    </td>
+                    <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-2)' }}>
+                      {deviceNameOf(sess) || em}
                     </td>
                     <td>{sess.communication_session_id || em}</td>
                     <td>

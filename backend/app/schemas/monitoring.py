@@ -56,6 +56,13 @@ class DecisionSnapshot(BaseModel):
     recommendations: List[str] = Field(default_factory=list, description="Actionable recommendations")
 
 
+class DeviceSnapshot(BaseModel):
+    """Identity of the device a snapshot belongs to."""
+    device_id: Optional[str] = Field(default=None, description="Owning device identifier")
+    device_name: Optional[str] = Field(default=None, description="Human-readable device name")
+    ip: Optional[str] = Field(default=None, description="Most recent client IP of the device")
+
+
 class UnifiedMonitoringSnapshot(BaseModel):
     """Complete unified monitoring state combining communication, signal, decision, and alerts."""
     model_config = ConfigDict(from_attributes=True)
@@ -64,10 +71,37 @@ class UnifiedMonitoringSnapshot(BaseModel):
     communication_session_id: Optional[str] = Field(default=None, description="Linked communication session ID")
     timestamp: datetime = Field(..., description="Snapshot capture timestamp (UTC)")
 
+    device: Optional[DeviceSnapshot] = Field(default=None, description="Device this snapshot belongs to (None in legacy/global contexts)")
     communication: CommunicationSnapshot = Field(..., description="Communication domain telemetry snapshot")
     signal: SignalSnapshot = Field(..., description="Signal & AI domain evidence snapshot")
     decision: DecisionSnapshot = Field(..., description="Unified decision assessment snapshot")
     alerts: List[Dict[str, Any]] = Field(default_factory=list, description="Active alerts relevant to monitoring state")
+
+
+class DeviceStatusResponse(BaseModel):
+    """One device as reported by the devices panel / network view."""
+    device_id: str
+    device_name: Optional[str] = None
+    ip: Optional[str] = None
+    connection_state: str = Field(default="disconnected", description="connected | disconnected(grace) | disconnected")
+    monitoring_session_id: Optional[str] = None
+    communication_session_id: Optional[str] = None
+    status: Optional[str] = None
+    health_score: Optional[float] = None
+    packet_loss_percent: Optional[float] = None
+    avg_latency_ms: Optional[float] = None
+    jitter_ms: Optional[float] = None
+    throughput_kbps: Optional[float] = None
+    packets_sent: Optional[int] = None
+    packets_received: Optional[int] = None
+    decision_status: Optional[str] = None
+    last_seen: Optional[float] = None
+
+
+class DeviceRosterResponse(BaseModel):
+    """Device registry summary: who is connected and how their links are doing."""
+    total: int
+    devices: List[DeviceStatusResponse]
 
 
 class SignalEvidenceInput(BaseModel):
@@ -132,6 +166,7 @@ class MonitoringSessionResponse(BaseModel):
 class MonitoringSessionStopRequest(BaseModel):
     """Request payload to cleanly stop a unified monitoring session."""
     monitoring_session_id: Optional[str] = Field(default=None, description="Monitoring session ID to stop (defaults to active session)")
+    device_id: Optional[str] = Field(default=None, description="Owning device ID — resolves the session when no session ID is given")
     stop_communication: bool = Field(default=True, description="Whether to also stop the underlying communication session")
     reason: Optional[str] = Field(default="completed", description="Reason for stopping session")
 

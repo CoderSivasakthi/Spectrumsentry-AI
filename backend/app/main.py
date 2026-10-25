@@ -1,6 +1,7 @@
 """Main FastAPI application entry point for SpectrumSentry AI."""
 
 from contextlib import asynccontextmanager
+import logging
 from typing import Dict
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from backend.app.config.settings import get_settings
 from backend.app.database.database import init_db
 
 settings = get_settings()
+logger = logging.getLogger("spectrumsentry.main")
 
 
 @asynccontextmanager
@@ -115,14 +117,38 @@ async def websocket_communication_endpoint(websocket: WebSocket):
 
 @app.websocket("/ws/monitoring")
 async def websocket_monitoring_endpoint(websocket: WebSocket):
-    """WebSocket endpoint broadcasting unified real-time monitoring snapshots and events."""
+    """WebSocket endpoint broadcasting per-device unified monitoring snapshots and events.
+
+    The handshake query carries the client's device identity (`device_id` +
+    `device_name`, generated once in the browser's localStorage). Connecting
+    auto-starts that device's own monitoring + link-test session; dropping the
+    last connection for the device schedules a grace-period auto-stop so a
+    reconnected/reloaded page keeps its session.
+    """
     from backend.app.monitoring.unified_manager import unified_monitor
     from backend.app.websocket.manager import monitoring_ws_manager
 
-    await monitoring_ws_manager.connect(websocket)
+    query = dict(websocket.query_params)
+    device_id = query.get("device_id") or "local"
+    device_name = query.get("device_name")
+    client_ip = websocket.client.host if websocket.client else None
+
+    # Ensure the device owns a live session pair before its first snapshot
     try:
-        # Send initial unified monitoring snapshot
-        snapshot = unified_monitor.get_current_snapshot()
+        unified_monitor.on_device_connected(
+            device_id=device_id, device_name=device_name, ip=client_ip
+        )
+    except Exception as exc:
+        logger.warning(
+            "Device auto-start failed for '%s': %s", device_id, exc
+        )
+
+    await monitoring_ws_manager.connect(
+        websocket, device_id=device_id, device_name=device_name, ip=client_ip
+    )
+    try:
+        # Send this device's unified monitoring snapshot
+        snapshot = unified_monitor.get_current_snapshot(device_id=device_id)
         initial_payload = {
             "type": "monitoring_snapshot",
             "timestamp": snapshot.timestamp.isoformat(),
@@ -136,6 +162,10 @@ async def websocket_monitoring_endpoint(websocket: WebSocket):
                 await websocket.send_text("pong")
     except WebSocketDisconnect:
         monitoring_ws_manager.disconnect(websocket)
+        if monitoring_ws_manager.get_device_connection_count(device_id) == 0:
+            unified_monitor.on_device_disconnected(device_id)
     except Exception:
         monitoring_ws_manager.disconnect(websocket)
+        if monitoring_ws_manager.get_device_connection_count(device_id) == 0:
+            unified_monitor.on_device_disconnected(device_id)
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { WS_BASE_URL } from '../api/client';
+import { getDeviceId, getDeviceName } from '../lib/deviceIdentity';
 import {
   UnifiedMonitoringSnapshot,
   WebSocketConnectionStatus,
@@ -38,7 +39,11 @@ export const useMonitoringWebSocket = (options: UseMonitoringWebSocketOptions = 
       return;
     }
 
-    const wsUrl = `${WS_BASE_URL}/ws/monitoring`;
+    // The handshake carries this device's identity — the backend registers the
+    // device and starts (or reuses) its own monitoring session on connect.
+    const wsUrl = `${WS_BASE_URL}/ws/monitoring?device_id=${encodeURIComponent(
+      getDeviceId()
+    )}&device_name=${encodeURIComponent(getDeviceName())}`;
     setConnectionStatus(reconnectAttemptsRef.current === 0 ? 'CONNECTING' : 'RECONNECTING');
 
     try {

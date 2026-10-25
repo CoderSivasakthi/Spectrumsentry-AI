@@ -43,6 +43,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+# frontend/src/lib/ holds first-party source modules, not build output
+!frontend/src/lib/
 
 # Databases and storage
 *.db

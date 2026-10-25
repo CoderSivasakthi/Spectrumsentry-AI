@@ -106,13 +106,36 @@ Open this page ON THE PHONE hotspot browser: http://&lt;server-host&gt;:8000/sen
     return full.slice(0, Math.max(1, size));
   }
 
+  // Device identity: stable per-browser, so this sender shows up in the
+  // dashboard's device roster as itself (not a ghost session).
+  function deviceId() {
+    var id = null;
+    try { id = localStorage.getItem("sps_device_id"); } catch (e) { /* private mode */ }
+    if (!id) {
+      id = "sender_" + Math.random().toString(16).slice(2, 10);
+      try { localStorage.setItem("sps_device_id", id); } catch (e) { /* private mode */ }
+    }
+    return id;
+  }
+  function deviceName() {
+    var name = "Phone sender";
+    try {
+      name = localStorage.getItem("sps_device_name") || ("Sender-" + deviceId().slice(-4));
+      localStorage.setItem("sps_device_name", name);
+    } catch (e) { /* private mode */ }
+    return name;
+  }
+
   async function startSession() {
     $("startBtn").disabled = true;
     try {
       var res = await fetch("/api/communication/session/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ timeout_seconds: 2.0, extra_metadata: { client: "phone_sender" } })
+        body: JSON.stringify({
+          timeout_seconds: 2.0,
+          extra_metadata: { client: "phone_sender", device_id: deviceId(), device_name: deviceName() }
+        })
       });
       if (!res.ok) throw new Error("HTTP " + res.status);
       var data = await res.json();

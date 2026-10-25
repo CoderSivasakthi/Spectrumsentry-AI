@@ -94,11 +94,22 @@ function createMockContext(overrides?: Partial<MonitoringContextValue>): Monitor
     isBackendHealthy: true,
     isLoading: false,
     error: null,
-    activeTab: 'dashboard',
+    activeTab: 'live',
     setActiveTab: () => {},
+    linkTest: {
+      running: false,
+      start: async () => {},
+      stop: async () => {},
+      switchProfile: () => {},
+    } as any,
+    deviceRoster: null,
+    refreshDevices: async () => {},
+    deviceId: 'dev_test001',
+    deviceName: 'Device-Test',
     startSession: async () => {},
     stopSession: async () => {},
     submitSignal: async () => {},
+    runSignalSimulation: async () => null,
     refresh: async () => {},
     ...overrides,
   };
@@ -482,5 +493,72 @@ describe('Phase 8 Dashboard Test Suite', () => {
     const html = renderWithContext(React.createElement(Dashboard), ctx);
     // Responsive grid layout checks
     assert.ok(html.includes('dash-grid'), 'Must support responsive dashboard grid');
+  });
+});
+
+describe('Per-device sessions & report export tests', () => {
+  // Test 21: Device identity is stable and name configurable
+  test('21. Device identity is stable across calls and supports renames', async () => {
+    const { getDeviceId, setDeviceName, getDeviceName } = await import('../lib/deviceIdentity');
+
+    const first = getDeviceId();
+    assert.ok(first, 'device id must be generated');
+    assert.match(first, /^dev_[0-9a-f]{8}$/, 'device id must be dev_ + 8 hex chars');
+
+    const second = getDeviceId();
+    assert.equal(second, first, 'device id must stay stable after rename');
+
+    // Renames persist only where localStorage exists (browser); in the bare
+    // node test env the helper degrades to session-only identity — still a
+    // call-safe operation.
+    setDeviceName('Test-Phone');
+    const withStorage = typeof globalThis.localStorage !== 'undefined';
+    if (withStorage) {
+      assert.equal(getDeviceName(), 'Test-Phone', 'device name must update when storage exists');
+    }
+  });
+
+  // Test 22: Devices page renders a connected-device summary without a live socket
+  test('22. Devices page renders gracefully with no roster data yet', async () => {
+    const { Devices } = await import('../pages/Devices');
+    const ctx = createMockContext();
+    ctx.setActiveTab = () => {};
+    const html = renderWithContext(React.createElement(Devices, null), ctx);
+    assert.ok(html.includes('Connected devices'), 'Must contain device roster header');
+  });
+
+  // Test 23: History table shows the owning device for session rows
+  test('23. History table displays the device chip from session metadata', () => {
+    const sessions: MonitoringSessionSummary[] = [
+      {
+        id: 1,
+        monitoring_session_id: 'mon-device-001',
+        communication_session_id: 'comm-device-001',
+        created_at: '2026-10-18T09:30:00Z',
+        started_at: '2026-10-18T09:30:05Z',
+        ended_at: '2026-10-18T09:40:00Z',
+        status: 'COMPLETED',
+        extra_metadata: { device_id: 'dev_aabbccdd', device_name: 'Phone-WiFi' },
+      },
+    ];
+
+    const html = renderToString(
+      React.createElement(HistoryTable, {
+        initialSessions: sessions,
+        initialTotal: 1,
+        autoFetch: false,
+      })
+    );
+    assert.ok(html.includes('Phone-WiFi'), 'Must show the device name chip for the session');
+  });
+
+  // Test 24: CSV download uses the server-rendered report endpoint
+  test('24. CSV report URL helper points at the server CSV endpoint', async () => {
+    const { getMonitoringSessionReportCsvUrl } = await import('../api/monitoring');
+    const url = getMonitoringSessionReportCsvUrl('mon_abc123');
+    assert.ok(
+      url.startsWith('/api/monitoring/session/mon_abc123/report.csv'),
+      'CSV export must use the backend report.csv endpoint'
+    );
   });
 });

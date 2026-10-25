@@ -81,6 +81,7 @@ export interface MonitoringSessionResponse {
 
 export interface MonitoringSessionStopRequest {
   monitoring_session_id?: string;
+  device_id?: string;
   stop_communication?: boolean;
   reason?: string;
 }
@@ -175,9 +176,33 @@ export interface CommunicationMetricsDetail {
 }
 
 export interface WebSocketMessage<T = unknown> {
-  type: 'monitoring_snapshot' | 'signal_update' | 'session_started' | 'session_stopped' | string;
+  type: 'monitoring_snapshot' | 'signal_update' | 'session_started' | 'session_stopped' | 'devices_changed' | string;
   timestamp: string;
   data: T;
+}
+
+export interface DeviceStatus {
+  device_id: string;
+  device_name: string | null;
+  ip: string | null;
+  connection_state: string;
+  monitoring_session_id: string | null;
+  communication_session_id: string | null;
+  status: string | null;
+  health_score: number | null;
+  packet_loss_percent: number | null;
+  avg_latency_ms: number | null;
+  jitter_ms: number | null;
+  throughput_kbps: number | null;
+  packets_sent: number | null;
+  packets_received: number | null;
+  decision_status: string | null;
+  last_seen: number | null;
+}
+
+export interface DeviceRosterResponse {
+  total: number;
+  devices: DeviceStatus[];
 }
 
 export interface TimelineEvent {

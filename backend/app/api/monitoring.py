@@ -5,7 +5,10 @@ signal evidence ingestion, operational status polling, and monitoring history.
 """
 
 from typing import Any, Dict, Optional
+import csv
+import io
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from backend.app.database.database import get_db
@@ -19,6 +22,7 @@ from backend.app.database.repository import (
 )
 from backend.app.monitoring.unified_manager import unified_monitor
 from backend.app.schemas.monitoring import (
+    DeviceRosterResponse,
     MonitoringHistoryResponse,
     MonitoringSessionResponse,
     MonitoringSessionStartRequest,
@@ -41,16 +45,32 @@ router = APIRouter(prefix="/monitoring", tags=["Unified Monitoring"])
 )
 async def get_monitoring_status(
     session_id: Optional[str] = Query(None, description="Optional target communication session ID"),
+    device_id: Optional[str] = Query(None, description="Optional owning device ID for its own snapshot"),
     db: Session = Depends(get_db),
 ) -> UnifiedMonitoringSnapshot:
-    """Fetch current real-time unified monitoring snapshot."""
+    """Fetch current real-time unified monitoring snapshot (device-scoped when given)."""
     try:
-        return unified_monitor.get_current_snapshot(db=db, session_id=session_id)
+        return unified_monitor.get_current_snapshot(db=db, session_id=session_id, device_id=device_id)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate unified monitoring snapshot: {str(exc)}",
         ) from exc
+
+
+@router.get(
+    "/devices",
+    response_model=DeviceRosterResponse,
+    summary="List connected devices and their live link telemetry",
+    description=(
+        "Returns the per-device session registry merged with live WebSocket "
+        "connection state and packet telemetry: how many devices are connected, "
+        "each device's identity, and the health of its link into the server."
+    ),
+)
+async def get_devices(db: Session = Depends(get_db)) -> DeviceRosterResponse:
+    """Return the device roster for the devices/network panel."""
+    return unified_monitor.get_device_roster()
 
 
 @router.post(
@@ -64,9 +84,13 @@ async def start_monitoring_session(
     request: MonitoringSessionStartRequest,
     db: Session = Depends(get_db),
 ) -> MonitoringSessionResponse:
-    """Start unified monitoring session."""
+    """Start unified monitoring session, scoped to the requesting device when given."""
     try:
-        return unified_monitor.start_session(request, db)
+        device_id = (request.extra_metadata or {}).get("device_id") or "local"
+        device_name = (request.extra_metadata or {}).get("device_name")
+        return unified_monitor.start_session(
+            request, db, device_id=device_id, device_name=device_name
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -85,9 +109,9 @@ async def stop_monitoring_session(
     request: MonitoringSessionStopRequest,
     db: Session = Depends(get_db),
 ) -> MonitoringSessionSummary:
-    """Stop active monitoring session."""
+    """Stop active monitoring session (device-scoped when device_id is given)."""
     try:
-        return unified_monitor.stop_session(request, db)
+        return unified_monitor.stop_session(request, db, device_id=request.device_id)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -389,6 +413,164 @@ async def get_session_report(
         "decision_records": dec_records,
         "alerts": alerts,
     }
+
+
+# ------------------------------------------------------------------------------
+# Structured CSV export for session reports.
+# The old client-side export flattened the whole nested JSON report into a
+# two-column path,value dump, which Excel rendered as unreadable JSON-like
+# transcripts. This endpoint builds real tables with the stdlib csv module.
+# ------------------------------------------------------------------------------
+
+def _csv_cell(value: Any) -> Any:
+    """Format one report value for a CSV cell (lists/dicts become key=value runs)."""
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, float):
+        return round(value, 3)
+    if isinstance(value, dict):
+        if not value:
+            return ""
+        return "; ".join(f"{k}={_csv_cell(v)}" for k, v in value.items() if v not in (None, "", [], {}))
+    if isinstance(value, list):
+        return "; ".join(filter(None, (_csv_cell(v) for v in value))) or ""
+    return value
+
+
+def build_session_report_csv(report: Dict[str, Any]) -> str:
+    """Render the full session report as sectioned flat CSV text.
+
+    Sections (separated by blank rows, each with its own header row):
+      SUMMARY — flat key/value fields for quick reading
+      EVENTS — communication event table
+      DECISIONS — decision records table
+      ALERTS — system alert table
+    """
+    out = io.StringIO()
+    writer = csv.writer(out)
+
+    mon = report.get("monitoring_session") or {}
+    comm = report.get("communication_session") or {}
+    latest_decision = (report.get("decision_records") or [None])[-1] if report.get("decision_records") else None
+    comm_meta = comm.get("extra_metadata") if isinstance(comm.get("extra_metadata"), dict) else {}
+    mon_meta = mon.get("extra_metadata") if isinstance(mon.get("extra_metadata"), dict) else {}
+
+    writer.writerow(["SUMMARY"])
+    writer.writerow(["field", "value"])
+    summary_fields = [
+        ("generated_at", report.get("generated_at")),
+        ("device_name", comm_meta.get("device_name") or mon_meta.get("device_name")),
+        ("device_id", comm_meta.get("device_id") or mon_meta.get("device_id")),
+        ("monitoring_session_id", mon.get("monitoring_session_id")),
+        ("communication_session_id", mon.get("communication_session_id")),
+        ("monitoring_status", mon.get("status")),
+        ("started_at", mon.get("started_at")),
+        ("ended_at", mon.get("ended_at")),
+        ("duration_seconds", mon.get("duration_seconds")),
+        ("packets_sent", comm.get("packets_sent")),
+        ("packets_received", comm.get("packets_received")),
+        ("packets_lost", comm.get("packets_lost")),
+        ("packet_loss_percent", comm.get("packet_loss_percent")),
+        ("avg_latency_ms", comm.get("avg_latency_ms")),
+        ("min_latency_ms", comm.get("min_latency_ms")),
+        ("max_latency_ms", comm.get("max_latency_ms")),
+        ("median_latency_ms", comm.get("median_latency_ms")),
+        ("p95_latency_ms", comm.get("p95_latency_ms")),
+        ("p99_latency_ms", comm.get("p99_latency_ms")),
+        ("jitter_ms", comm.get("jitter_ms")),
+        ("throughput_bps", comm.get("throughput_bps")),
+        ("interruption_count", comm.get("interruption_count")),
+        ("total_interruption_duration_ms", comm.get("total_interruption_duration_ms")),
+        ("recovery_count", comm.get("recovery_count")),
+        ("health_score", comm.get("health_score")),
+        ("final_communication_status", comm.get("final_status")),
+        ("final_decision_status", latest_decision.get("overall_status") if latest_decision else None),
+        ("final_decision_confidence", latest_decision.get("decision_confidence") if latest_decision else None),
+        ("history_note", "See EVENTS, DECISIONS and ALERTS sections below."),
+    ]
+    for field, value in summary_fields:
+        writer.writerow([field, _csv_cell(value)])
+
+    writer.writerow([])
+    writer.writerow(["EVENTS"])
+    writer.writerow(["timestamp", "event_type", "duration_ms", "sequence_number", "details"])
+    for event in report.get("communication_events") or []:
+        writer.writerow([
+            event.get("timestamp") or "",
+            event.get("event_type") or "",
+            _csv_cell(event.get("duration_ms")),
+            event.get("sequence_number") if event.get("sequence_number") is not None else "",
+            _csv_cell(event.get("details")),
+        ])
+
+    writer.writerow([])
+    writer.writerow(["DECISIONS"])
+    writer.writerow([
+        "timestamp", "overall_status", "confidence", "consistency",
+        "primary_reason", "contributing_factors", "rules_triggered", "recommendations",
+    ])
+    for decision in report.get("decision_records") or []:
+        writer.writerow([
+            decision.get("timestamp") or "",
+            decision.get("overall_status") or "",
+            _csv_cell(decision.get("decision_confidence")),
+            decision.get("consistency") or "",
+            decision.get("primary_reason") or "",
+            _csv_cell(decision.get("contributing_factors")),
+            _csv_cell(decision.get("rules_triggered")),
+            _csv_cell(decision.get("recommendations")),
+        ])
+
+    writer.writerow([])
+    writer.writerow(["ALERTS"])
+    writer.writerow(["timestamp", "severity", "category", "message", "source", "resolved"])
+    for alert in report.get("alerts") or []:
+        writer.writerow([
+            alert.get("timestamp") or "",
+            alert.get("severity") or "",
+            alert.get("category") or "",
+            _csv_cell(alert.get("message")),
+            alert.get("source") or "",
+            _csv_cell(alert.get("resolved")),
+        ])
+
+    return out.getvalue()
+
+
+@router.get(
+    "/session/{session_id}/report.csv",
+    summary="Download session report as structured CSV",
+    description=(
+        "Excel-friendly CSV export of the full session report: a flat summary "
+        "block plus tabular EVENT, DECISION and ALERT sections. Opens as real "
+        "tables instead of a flattened JSON transcript."
+    ),
+)
+async def get_session_report_csv(
+    session_id: str,
+    db: Session = Depends(get_db),
+) -> Response:
+    """Stream the session report as a downloadable CSV file."""
+    try:
+        report = await get_session_report(session_id, db)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to build CSV report: {str(exc)}",
+        ) from exc
+
+    csv_text = build_session_report_csv(report)
+    safe_name = "".join(c for c in session_id if c.isalnum() or c in "-_") or "session"
+    filename = f"{safe_name}_report.csv"
+    return Response(
+        content=("﻿" + csv_text).encode("utf-8"),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get(

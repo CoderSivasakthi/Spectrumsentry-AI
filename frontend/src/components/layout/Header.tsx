@@ -5,6 +5,7 @@ import { StatusBadge } from '../common/StatusBadge';
 const VIEW_TITLES: Record<string, string> = {
   live: 'Live monitor',
   link: 'Link test',
+  devices: 'Devices & network',
   signal: 'AI signal lab',
   sessions: 'Sessions',
   system: 'System',

@@ -1,6 +1,7 @@
 import { apiClient } from './client';
 import {
   CommunicationMetricsDetail,
+  DeviceRosterResponse,
   MonitoringHistoryResponse,
   MonitoringSessionResponse,
   MonitoringSessionStartRequest,
@@ -14,9 +15,12 @@ import {
 } from '../types/monitoring';
 
 export const getMonitoringStatus = async (
-  sessionId?: string
+  sessionId?: string,
+  deviceId?: string
 ): Promise<UnifiedMonitoringSnapshot> => {
-  const params = sessionId ? { session_id: sessionId } : {};
+  const params: Record<string, string> = {};
+  if (sessionId) params.session_id = sessionId;
+  if (deviceId) params.device_id = deviceId;
   const response = await apiClient.get<UnifiedMonitoringSnapshot>('/api/monitoring/status', {
     params,
   });
@@ -131,3 +135,13 @@ export const getMonitoringSessionReport = async (
   );
   return response.data;
 };
+
+/** Per-device roster: how many devices are connected and how each link is doing. */
+export const getDevices = async (): Promise<DeviceRosterResponse> => {
+  const response = await apiClient.get<DeviceRosterResponse>('/api/monitoring/devices');
+  return response.data;
+};
+
+/** URL for the server-rendered Excel-friendly CSV report download. */
+export const getMonitoringSessionReportCsvUrl = (sessionId: string): string =>
+  `/api/monitoring/session/${encodeURIComponent(sessionId)}/report.csv`;

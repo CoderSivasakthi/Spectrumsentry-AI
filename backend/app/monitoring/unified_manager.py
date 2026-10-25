@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 import logging
 import random
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 import uuid
 import numpy as np
 from sqlalchemy.orm import Session
@@ -49,6 +49,9 @@ from backend.app.schemas.decision import (
 from backend.app.schemas.monitoring import (
     CommunicationSnapshot,
     DecisionSnapshot,
+    DeviceRosterResponse,
+    DeviceSnapshot,
+    DeviceStatusResponse,
     MonitoringHistoryResponse,
     MonitoringSessionResponse,
     MonitoringSessionStartRequest,
@@ -63,31 +66,100 @@ from backend.app.websocket.manager import monitoring_ws_manager
 logger = logging.getLogger("spectrumsentry.monitoring")
 
 
+DEVICE_GRACE_STOP_SECONDS = 15.0
+LOCAL_DEVICE_ID = "local"
+
+
 class UnifiedMonitoringManager:
-    """Central integration engine coordinating real-time telemetry, signal evidence, and decisions."""
+    """Central integration engine coordinating real-time telemetry, signal evidence, and decisions.
+
+    Sessions are tracked per device: each connected device (browser console or
+    sender page) owns its own monitoring + communication session. The shared
+    physical-layer signal pipeline runs while at least one device session is
+    active, and every device's snapshots are broadcast only to that device.
+    """
 
     def __init__(self):
         self.active_monitoring_session_id: Optional[str] = None
         self.active_communication_session_id: Optional[str] = None
 
-        # Signal Evidence State
+        # Per-device session registry, keyed by device_id. Each entry:
+        #   device_name, ips, connected_at, last_seen (posix),
+        #   monitoring_session_id, communication_session_id,
+        #   pending_stop (Optional[asyncio.Task] grace-stop timer)
+        self.device_sessions: Dict[str, Dict[str, Any]] = {}
+
+        # Signal Evidence State (shared channel: one real physical phenomenon)
         self.latest_signal_evidence: Optional[SignalEvidenceInput] = None
         self.latest_signal_time: Optional[float] = None  # posix seconds
 
-        # Cached last snapshot
+        # Cached last snapshot (report fallback for live sessions)
         self.latest_snapshot: Optional[UnifiedMonitoringSnapshot] = None
 
-        # Continuous signal pipeline (background task while a session is active)
+        # Continuous signal pipeline (background task while any session is active)
         self._signal_task: Optional[asyncio.Task] = None
         self._signal_config: Optional[Dict[str, Any]] = None
 
         # Register callback with Phase 5 PacketMonitor
         packet_monitor.register_listener(self.on_packet_ingested)
 
+    # ------------------------------------------------------------------
+    # Device registry helpers
+    # ------------------------------------------------------------------
+
+    def _entry_for_supervision_session(self, monitoring_session_id: str) -> Optional[str]:
+        for device_id, entry in self.device_sessions.items():
+            if entry.get("monitoring_session_id") == monitoring_session_id:
+                return device_id
+        return None
+
+    def _entry_for_comm_session(self, communication_session_id: str) -> Optional[str]:
+        if not communication_session_id:
+            return None
+        for device_id, entry in self.device_sessions.items():
+            if entry.get("communication_session_id") == communication_session_id:
+                return device_id
+        return None
+
+    def active_device_ids(self) -> List[str]:
+        """Device IDs with a live session right now."""
+        return list(self.device_sessions.keys())
+
+    def _broadcast_registry_change(self) -> None:
+        """Notify all consoles that the device roster changed."""
+        try:
+            loop = asyncio.get_running_loop()
+            if loop.is_running():
+                loop.create_task(self._notify_registry_change())
+        except RuntimeError:
+            pass
+
+    async def _notify_registry_change(self) -> None:
+        from backend.app.websocket.manager import monitoring_ws_manager
+        await monitoring_ws_manager.broadcast(
+            {"type": "devices_changed", "timestamp": utc_now().isoformat(), "data": {}}
+        )
+
+    def _ensure_signal_pipeline(self) -> None:
+        """Start (or keep) the shared signal pipeline while at least one device session runs."""
+        if self._signal_task is None or self._signal_task.done():
+            self._start_signal_pipeline()
+
+    def _maybe_stop_signal_pipeline(self) -> None:
+        """Stop the pipeline only when no device session remains."""
+        if not self.device_sessions:
+            self._stop_signal_pipeline()
+            self.clear_signal_evidence()
+
     def start_session(
-        self, request: MonitoringSessionStartRequest, db: Session
+        self,
+        request: MonitoringSessionStartRequest,
+        db: Session,
+        device_id: str = LOCAL_DEVICE_ID,
+        device_name: Optional[str] = None,
+        ip: Optional[str] = None,
     ) -> MonitoringSessionResponse:
-        """Initiate a unified monitoring session and correlate with communication domain."""
+        """Initiate a per-device unified monitoring session and correlate with communication domain."""
         monitoring_session_id = request.monitoring_session_id or f"mon_{uuid.uuid4().hex[:12]}"
         comm_session_id = request.communication_session_id
 
@@ -106,10 +178,32 @@ class UnifiedMonitoringManager:
         self.active_monitoring_session_id = monitoring_session_id
         self.active_communication_session_id = comm_session_id
 
-        # Keep physical-layer evidence flowing while the session is live
-        self._start_signal_pipeline()
+        # Track the session against its owning device (each device owns a pair)
+        now_posix = time.time()
+        entry = self.device_sessions.setdefault(
+            device_id,
+            {"ips": [], "connected_at": utc_now(), "pending_stop": None},
+        )
+        if device_name:
+            entry["device_name"] = device_name
+        if ip:
+            entry.setdefault("ips", [])
+            entry["ips"] = [ip] + [i for i in entry["ips"] if i != ip]
+        entry["monitoring_session_id"] = monitoring_session_id
+        entry["communication_session_id"] = comm_session_id
+        entry["last_seen"] = now_posix
 
-        # Persist session to SQLite
+        # Keep physical-layer evidence flowing while any session runs
+        self._ensure_signal_pipeline()
+
+        # Persist session to SQLite with device identity in metadata
+        persisted_metadata = dict(request.extra_metadata or {})
+        persisted_metadata.setdefault("device_id", device_id)
+        if device_name:
+            persisted_metadata.setdefault("device_name", device_name)
+        if ip:
+            persisted_metadata.setdefault("client_ip", ip)
+
         session_repo = MonitoringSessionRepository(db)
         existing = session_repo.get_by_id(monitoring_session_id)
         started_time = utc_now()
@@ -120,7 +214,7 @@ class UnifiedMonitoringManager:
                 created_at=started_time,
                 started_at=started_time,
                 status="ACTIVE",
-                extra_metadata=request.extra_metadata,
+                extra_metadata=persisted_metadata,
             )
             session_repo.create(db_session)
 
@@ -130,17 +224,24 @@ class UnifiedMonitoringManager:
             {
                 "monitoring_session_id": monitoring_session_id,
                 "communication_session_id": comm_session_id,
+                "device_id": device_id,
                 "started_at": started_time.isoformat(),
             },
         )
 
-        # Broadcast initial snapshot
-        snapshot = self.get_current_snapshot(db=db)
-        self.broadcast_snapshot(snapshot)
+        # Broadcast initial snapshot targeted at the owning device
+        snapshot = self.get_current_snapshot(
+            db=db,
+            session_id=comm_session_id,
+            device_id=device_id,
+        )
+        self.broadcast_snapshot(snapshot, device_id=device_id)
+        self._broadcast_registry_change()
 
         logger.info(
-            "Unified monitoring session started: %s (Linked Comm: %s)",
+            "Unified monitoring session started: %s (device: %s, linked comm: %s)",
             monitoring_session_id,
+            device_id,
             comm_session_id,
         )
 
@@ -153,12 +254,31 @@ class UnifiedMonitoringManager:
         )
 
     def stop_session(
-        self, request: MonitoringSessionStopRequest, db: Session
+        self,
+        request: MonitoringSessionStopRequest,
+        db: Session,
+        device_id: Optional[str] = None,
     ) -> MonitoringSessionSummary:
-        """Cleanly terminate an active unified monitoring session and persist summary."""
-        target_id = request.monitoring_session_id or self.active_monitoring_session_id
+        """Cleanly terminate one device's unified monitoring session and persist summary."""
+        target_id = request.monitoring_session_id
+
+        # Resolve the owning device (by explicit device_id, then registry lookup)
+        owning_device_id = device_id or self._entry_for_supervision_session(target_id or "")
+
+        # Legacy/default path: fall back to the last-started session pointers.
+        if not target_id and not owning_device_id:
+            target_id = self.active_monitoring_session_id
+        elif not target_id and owning_device_id:
+            target_id = self.device_sessions.get(owning_device_id, {}).get("monitoring_session_id")
+
         if not target_id:
             raise ValueError("No active monitoring session to stop.")
+
+        if owning_device_id is None:
+            owning_device_id = self._entry_for_supervision_session(target_id)
+
+        entry = self.device_sessions.get(owning_device_id, {})
+        comm_session_id = entry.get("communication_session_id") or self.active_communication_session_id
 
         session_repo = MonitoringSessionRepository(db)
         db_sess = session_repo.get_by_id(target_id)
@@ -167,15 +287,20 @@ class UnifiedMonitoringManager:
 
         # Persist a final decision record so the session report is complete
         try:
-            self.get_current_snapshot(db=db, persist_decision=True)
+            self.get_current_snapshot(
+                db=db,
+                session_id=comm_session_id,
+                device_id=owning_device_id,
+                persist_decision=True,
+            )
         except Exception as exc:
             logger.debug("Final decision persistence failed: %s", exc)
 
         # Stop communication session if requested and linked
-        if request.stop_communication and self.active_communication_session_id:
+        if request.stop_communication and comm_session_id:
             try:
                 stop_comm_req = SessionStopRequest(
-                    session_id=self.active_communication_session_id,
+                    session_id=comm_session_id,
                     reason=request.reason,
                 )
                 packet_monitor.stop_session(stop_comm_req, db)
@@ -192,6 +317,7 @@ class UnifiedMonitoringManager:
             "session_stopped",
             {
                 "monitoring_session_id": target_id,
+                "device_id": owning_device_id,
                 "ended_at": ended_time.isoformat(),
                 "reason": request.reason,
             },
@@ -201,20 +327,128 @@ class UnifiedMonitoringManager:
             self.active_monitoring_session_id = None
             self.active_communication_session_id = None
 
-        # No live session: stop producing signal evidence and reset to an
-        # honest inactive-feed state rather than leaving stale numbers visible.
-        self._stop_signal_pipeline()
-        self.clear_signal_evidence()
+        # Remove the device's registration; the shared signal pipeline keeps
+        # running only while another device still holds a session.
+        if owning_device_id is not None and self.device_sessions.get(
+            owning_device_id, {}
+        ).get("monitoring_session_id") == target_id:
+            self.device_sessions.pop(owning_device_id, None)
+        self._maybe_stop_signal_pipeline()
+        self._broadcast_registry_change()
 
-        # Session is closing: no conditions remain observable, clear open alerts
-        try:
-            AlertRepository(db).resolve_all_active()
-        except Exception as exc:
-            logger.debug("Alert auto-resolution on session stop failed: %s", exc)
+        # Last device leaving: no conditions remain observable anywhere, clear open alerts
+        if not self.device_sessions:
+            try:
+                AlertRepository(db).resolve_all_active()
+            except Exception as exc:
+                logger.debug("Alert auto-resolution on session stop failed: %s", exc)
 
-        logger.info("Unified monitoring session stopped: %s", target_id)
+        logger.info(
+            "Unified monitoring session stopped: %s (device: %s)", target_id, owning_device_id
+        )
 
         return MonitoringSessionSummary.model_validate(db_sess)
+
+    # ------------------------------------------------------------------
+    # Device handshake: auto-start on connect, grace-stop on disconnect
+    # ------------------------------------------------------------------
+
+    def on_device_connected(
+        self, device_id: str, device_name: Optional[str] = None, ip: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Register a device connection and ensure it has a live session pair.
+
+        Cancels any pending grace-stop (page reload/reconnect reuses the
+        session); otherwise a fresh session is started under the device id.
+        """
+        entry = self.device_sessions.get(device_id)
+        if entry is not None and entry.get("pending_stop") is not None:
+            pending = entry.get("pending_stop")
+            if pending is not None and not pending.done():
+                pending.cancel()
+            entry["pending_stop"] = None
+            if entry.get("monitoring_session_id"):
+                if device_name:
+                    entry["device_name"] = device_name
+                if ip:
+                    entry.setdefault("ips", [])
+                    entry["ips"] = [ip] + [i for i in entry["ips"] if i != ip]
+                entry["last_seen"] = time.time()
+                return {
+                    "device_id": device_id,
+                    "monitoring_session_id": entry["monitoring_session_id"],
+                    "communication_session_id": entry["communication_session_id"],
+                    "reused": True,
+                }
+
+        if entry is not None and entry.get("monitoring_session_id"):
+            # Session still live (explicit Start or a second tab): nothing to do
+            if device_name:
+                entry["device_name"] = device_name
+            if ip:
+                entry.setdefault("ips", [])
+                entry["ips"] = [ip] + [i for i in entry["ips"] if i != ip]
+            entry["last_seen"] = time.time()
+            return {
+                "device_id": device_id,
+                "monitoring_session_id": entry["monitoring_session_id"],
+                "communication_session_id": entry["communication_session_id"],
+                "reused": True,
+            }
+
+        db = SessionLocal()
+        try:
+            start_req = MonitoringSessionStartRequest(
+                monitoring_session_id=None,
+                auto_start_communication=True,
+                extra_metadata={"device_id": device_id, "source": "device_connect"},
+            )
+            resp = self.start_session(
+                start_req, db, device_id=device_id, device_name=device_name, ip=ip
+            )
+            return {
+                "device_id": device_id,
+                "monitoring_session_id": resp.monitoring_session_id,
+                "communication_session_id": resp.communication_session_id,
+                "reused": False,
+            }
+        finally:
+            db.close()
+
+    def on_device_disconnected(self, device_id: str) -> None:
+        """Schedule the grace-stop for a device whose last connection dropped."""
+        entry = self.device_sessions.get(device_id)
+        if not entry or not entry.get("monitoring_session_id"):
+            return
+        if entry.get("pending_stop") is not None and not entry["pending_stop"].done():
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        entry["pending_stop"] = loop.create_task(
+            self._grace_stop_device(device_id, DEVICE_GRACE_STOP_SECONDS)
+        )
+
+    async def _grace_stop_device(self, device_id: str, delay: float) -> None:
+        """After the grace period, stop the device's session unless it reconnected."""
+        await asyncio.sleep(delay)
+        entry = self.device_sessions.get(device_id)
+        if not entry or not entry.get("monitoring_session_id"):
+            return
+        logger.info("Device '%s' disconnected; grace period elapsed, stopping session.", device_id)
+        db = SessionLocal()
+        try:
+            stop_req = MonitoringSessionStopRequest(
+                monitoring_session_id=None,
+                stop_communication=True,
+                reason="device_disconnected",
+            )
+            self.stop_session(stop_req, db, device_id=device_id)
+        except Exception as exc:
+            logger.warning("Grace-stop for device '%s' failed: %s", device_id, exc)
+        finally:
+            db.close()
 
     # ------------------------------------------------------------------
     # Continuous signal pipeline (synthetic channel + real AI classifier)
@@ -482,20 +716,26 @@ class UnifiedMonitoringManager:
         self,
         db: Optional[Session] = None,
         session_id: Optional[str] = None,
+        device_id: Optional[str] = None,
         persist_decision: bool = False,
     ) -> UnifiedMonitoringSnapshot:
         """Assemble the complete real-time cross-domain monitoring snapshot.
 
-        Connects:
-          - Latest communication evidence
-          - Latest signal evidence with freshness check
-          - Decision Engine assessment
-          - System alerts
+        When ``device_id`` is given, communication evidence and session ids are
+        pulled from that device's own registry entry, so the snapshot describes
+        that device's link rather than the last-started global session.
         """
         now = utc_now()
 
+        device_entry = self.device_sessions.get(device_id or "")
+
         # 1. Gather Communication Evidence
-        comm_avail, comm_evidence, comm_snapshot = self._get_communication_evidence(session_id)
+        # A device-specific snapshot reads that device's own comm session
+        # unless the caller pinned one explicitly.
+        target_comm_id = session_id
+        if not target_comm_id and device_entry:
+            target_comm_id = device_entry.get("communication_session_id")
+        comm_avail, comm_evidence, comm_snapshot = self._get_communication_evidence(target_comm_id)
 
         # 2. Gather Signal Evidence & Check Freshness
         sig_avail, sig_stale, sig_ts, sig_age = self._check_signal_freshness()
@@ -560,7 +800,12 @@ class UnifiedMonitoringManager:
                 signal_evidence=sig_evidence_for_decision,
                 communication_evidence=comm_evidence_for_decision,
                 context_metadata={
-                    "monitoring_session_id": self.active_monitoring_session_id,
+                    "monitoring_session_id": (
+                        device_entry.get("monitoring_session_id")
+                        if device_entry
+                        else self.active_monitoring_session_id
+                    ),
+                    "device_id": device_id,
                     "signal_stale": sig_stale,
                 },
             )
@@ -685,13 +930,27 @@ class UnifiedMonitoringManager:
             except Exception as exc:
                 logger.debug("Failed to query active alerts: %s", exc)
 
+        device_snapshot = None
+        if device_id:
+            device_snapshot = DeviceSnapshot(
+                device_id=device_id,
+                device_name=device_entry.get("device_name") if device_entry else None,
+                ip=(device_entry.get("ips") or [None])[0] if device_entry else None,
+            )
+
         snapshot = UnifiedMonitoringSnapshot(
-            monitoring_session_id=self.active_monitoring_session_id,
+            monitoring_session_id=(
+                device_entry.get("monitoring_session_id")
+                if device_entry
+                else self.active_monitoring_session_id
+            ),
             communication_session_id=(
-                self.active_communication_session_id
+                target_comm_id
+                or self.active_communication_session_id
                 or packet_monitor.active_session_id
             ),
             timestamp=now,
+            device=device_snapshot,
             communication=comm_snapshot,
             signal=sig_snapshot,
             decision=dec_snapshot,
@@ -706,13 +965,21 @@ class UnifiedMonitoringManager:
     ) -> None:
         """Callback listener triggered on each packet ingestion in Phase 5 PacketMonitor."""
         try:
-            snapshot = self.get_current_snapshot(db=db, session_id=session_id)
-            self.broadcast_snapshot(snapshot)
+            device_id = self._entry_for_comm_session(session_id)
+            if device_id:
+                self.device_sessions[device_id]["last_seen"] = time.time()
+            snapshot = self.get_current_snapshot(db=db, session_id=session_id, device_id=device_id)
+            self.broadcast_snapshot(snapshot, device_id=device_id)
         except Exception as exc:
             logger.debug("Error in on_packet_ingested monitoring aggregator: %s", exc)
 
-    def broadcast_snapshot(self, snapshot: UnifiedMonitoringSnapshot) -> None:
-        """Non-blocking broadcast of complete monitoring snapshot to WebSocket subscribers."""
+    def broadcast_snapshot(
+        self, snapshot: UnifiedMonitoringSnapshot, device_id: Optional[str] = None
+    ) -> None:
+        """Non-blocking broadcast of a complete monitoring snapshot.
+
+        Targeted at the owning device when one is given; global otherwise.
+        """
         try:
             loop = asyncio.get_running_loop()
             if loop.is_running():
@@ -721,7 +988,7 @@ class UnifiedMonitoringManager:
                     "timestamp": snapshot.timestamp.isoformat(),
                     "data": snapshot.model_dump(mode="json"),
                 }
-                loop.create_task(monitoring_ws_manager.broadcast(payload))
+                loop.create_task(monitoring_ws_manager.broadcast(payload, device_id=device_id))
         except RuntimeError:
             pass  # Outside running event loop (e.g. sync unit test)
 
@@ -754,6 +1021,113 @@ class UnifiedMonitoringManager:
             "signal_stale": sig_stale,
             "timestamp": utc_now().isoformat(),
         }
+
+    def get_device_roster(self) -> DeviceRosterResponse:
+        """Summarize every registered device and the health of its link into the server.
+
+        Merges the session registry with live WebSocket connections and packet
+        telemetry so the dashboard knows how many devices are connected and
+        what each of their links is doing right now.
+        """
+        from backend.app.websocket.manager import monitoring_ws_manager
+
+        connected_map: Dict[str, Dict[str, Any]] = {}
+        for conn in monitoring_ws_manager.list_devices():
+            connected_map[conn["device_id"]] = conn
+
+        devices: List[DeviceStatusResponse] = []
+        handled_devices: Set[str] = set()
+        for device_id, entry in self.device_sessions.items():
+            comm_id = entry.get("communication_session_id")
+            comm_status: Dict[str, Any] = {}
+            metrics: Dict[str, Any] = {}
+            try:
+                status_dict = packet_monitor.get_session_status(comm_id)
+                comm_status = status_dict if isinstance(status_dict, dict) else {}
+            except Exception:
+                comm_status = {}
+            try:
+                live = packet_monitor.get_live_metrics(comm_id)
+                metrics = live.model_dump() if hasattr(live, "model_dump") else {}
+            except Exception:
+                metrics = {}
+
+            connection_info = connected_map.get(device_id)
+            in_grace = (time.time() - (entry.get("last_seen") or 0)) < DEVICE_GRACE_STOP_SECONDS
+
+            devices.append(
+                DeviceStatusResponse(
+                    device_id=device_id,
+                    device_name=entry.get("device_name") or (connection_info or {}).get("device_name"),
+                    ip=((connection_info or {}).get("ips") or entry.get("ips") or [None])[0],
+                    connection_state=(
+                        "connected" if connection_info
+                        else ("disconnected(grace)" if in_grace else "disconnected")
+                    ),
+                    monitoring_session_id=entry.get("monitoring_session_id"),
+                    communication_session_id=comm_id,
+                    status=comm_status.get("status"),
+                    health_score=metrics.get("health_score"),
+                    packet_loss_percent=metrics.get("packet_loss_percent"),
+                    avg_latency_ms=metrics.get("avg_latency_ms"),
+                    jitter_ms=metrics.get("jitter_ms"),
+                    throughput_kbps=metrics.get("throughput_kbps"),
+                    packets_sent=metrics.get("packets_sent"),
+                    packets_received=metrics.get("packets_received"),
+                    decision_status=(
+                        self.latest_snapshot.decision.status.value
+                        if (
+                            self.latest_snapshot
+                            and self.latest_snapshot.monitoring_session_id
+                            == entry.get("monitoring_session_id")
+                            and hasattr(self.latest_snapshot.decision.status, "value")
+                        )
+                        else None
+                    ),
+                    last_seen=entry.get("last_seen"),
+                )
+            )
+            handled_devices.add(device_id)
+
+        # Sender-page (and other direct comm-session) devices: carry device
+        # identity in their comm-session metadata but have no unified session
+        # of their own — still show them in the roster.
+        for comm_id, monitor in packet_monitor.sessions.items():
+            # Stopped sessions are finished history, not live devices — they
+            # would otherwise linger in the "connected devices" roster forever.
+            if monitor.status == CommunicationStatus.STOPPED:
+                continue
+            device_id = (monitor.extra_metadata or {}).get("device_id")
+            if not device_id or device_id in handled_devices:
+                continue
+            handled_devices.add(device_id)
+            try:
+                live = packet_monitor.get_live_metrics(comm_id)
+                metrics = live.model_dump() if hasattr(live, "model_dump") else {}
+            except Exception:
+                metrics = {}
+            devices.append(
+                DeviceStatusResponse(
+                    device_id=device_id,
+                    device_name=(monitor.extra_metadata or {}).get("device_name"),
+                    ip=None,
+                    connection_state="connected" if monitor.status != CommunicationStatus.STOPPED else "disconnected",
+                    monitoring_session_id=None,
+                    communication_session_id=comm_id,
+                    status=monitor.status.value,
+                    health_score=metrics.get("health_score"),
+                    packet_loss_percent=metrics.get("packet_loss_percent"),
+                    avg_latency_ms=metrics.get("avg_latency_ms"),
+                    jitter_ms=metrics.get("jitter_ms"),
+                    throughput_kbps=metrics.get("throughput_kbps"),
+                    packets_sent=metrics.get("packets_sent"),
+                    packets_received=metrics.get("packets_received"),
+                    decision_status=None,
+                    last_seen=None,
+                )
+            )
+
+        return DeviceRosterResponse(total=len(devices), devices=devices)
 
     def get_history(
         self, db: Session, skip: int = 0, limit: int = 50
